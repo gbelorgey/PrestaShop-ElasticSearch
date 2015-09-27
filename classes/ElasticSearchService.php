@@ -352,6 +352,8 @@ class ElasticSearchService extends SearchService
 
 			if (!$this->createIndexForCurrentShop())
 				return false;
+			// Give ES some time to breath, or next request will get a 503
+			sleep(1);
 
 			$id_shop = (int)Context::getContext()->shop->id;
 			$shop_products = $this->module_instance->getAllProducts($id_shop);
