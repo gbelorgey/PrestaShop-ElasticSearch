@@ -284,6 +284,8 @@ class ElasticSearch extends Module
 			$this->indexProducts();
 		elseif (Tools::isSubmit('continueIndexing'))
 			$this->indexProducts(false);
+		elseif (Tools::isSubmit('continueIndexingCategories'))
+			$this->indexCategories();
 		elseif (Tools::isSubmit('submitAddelasticsearch_template'))
 			$this->saveFilterTemplate();
 		elseif (Tools::isSubmit('deleteFilterTemplate'))
@@ -515,6 +517,17 @@ class ElasticSearch extends Module
 			$this->html .= $this->renderErrors($search->errors);
 	}
 
+	private function indexCategories()
+	{
+		$search = $this->getSearchServiceObject();
+		$search->indexAllCategories();
+
+		if (!$search->errors)
+			$this->html .= $this->displayConfirmation($this->l('Categories indexed successfully'));
+		else
+			$this->html .= $this->renderErrors($search->errors);
+	}
+
 	private function addTreeJs()
 	{
 		$admin_webpath = str_ireplace(_PS_CORE_DIR_, '', _PS_ADMIN_DIR_);
@@ -608,6 +621,7 @@ class ElasticSearch extends Module
 	private function displayIndexingBlock()
 	{
 		$this->calculateIndexedProducts();
+		$this->calculateIndexedCategories();
 
 		if (Shop::getContext() != Shop::CONTEXT_SHOP)
 			$this->context->smarty->assign('shop_restriction', true);
@@ -632,6 +646,26 @@ class ElasticSearch extends Module
 		$this->context->smarty->assign(array(
 			'indexed_products' => $indexed_products,
 			'all_products' => $all_products
+		));
+	}
+
+	private function calculateIndexedCategories()
+	{
+		$indexed_categories = 0;
+		$all_categories = $this->getCategoriesCount($this->context->shop->id);
+		$search = $this->getSearchServiceObject();
+
+		if ($search->testSearchServiceConnection())
+		{
+			$type = 'categories';
+			$property = 'all';
+			$query = $search->buildSearchQuery($property, '');
+			$indexed_categories = $search->getDocumentsCount($type, $query);
+		}
+
+		$this->context->smarty->assign(array(
+			'indexed_categories' => $indexed_categories,
+			'all_categories' => $all_categories
 		));
 	}
 
@@ -732,6 +766,18 @@ class ElasticSearch extends Module
 			WHERE `active` = 1
 				AND `id_shop` = "'.(int)$id_shop.'"
 				AND `visibility` IN ("both", "search")'
+		);
+	}
+
+	public function getCategoriesCount($id_shop)
+	{
+		return (int)Db::getInstance()->getValue('
+			SELECT count(cs.`id_category`)
+			FROM `'._DB_PREFIX_.'category_shop` cs
+			INNER JOIN `'._DB_PREFIX_.'category` c
+				ON cs.`id_category` = c.`id_category`
+			WHERE c.`active` = 1
+				AND cs.`id_shop` = "'.(int)$id_shop.'"'
 		);
 	}
 

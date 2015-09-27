@@ -37,11 +37,14 @@
 		{else}
 			<p class="alert alert-info">
 				<b>{$indexed_products|intval} / {$all_products|intval}</b> {l s='indexed products' mod='elasticsearch'}
+				<br />
+				<b>{$indexed_categories|intval} / {$all_categories|intval}</b> {l s='indexed categories' mod='elasticsearch'}
 			</p>
 			<p>
 				<input class="btn btn-default" type="submit" name="startIndexing" value="{l s='Reindex all products' mod='elasticsearch'}" />
 				&nbsp;
-				<input class="btn btn-default" type="submit" name="continueIndexing" value="{l s='Reindex missing products' mod='elasticsearch'}" />
+				<input class="btn btn-default" type="submit" name="continueIndexing" value="{l s='Reindex missing products' mod='elasticsearch'}" />&nbsp;
+				<input class="btn btn-default" type="submit" name="continueIndexingCategories" value="{l s='Reindex missing categories' mod='elasticsearch'}" />
 			</p>
 		{/if}
 	</div>
