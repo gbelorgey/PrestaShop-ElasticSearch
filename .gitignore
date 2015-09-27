@@ -1,3 +1,5 @@
-config.xml
+config*.xml
+logs/
 vendor/
 .idea
+.DS_Store
