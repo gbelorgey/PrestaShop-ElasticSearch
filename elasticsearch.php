@@ -820,12 +820,12 @@ class ElasticSearch extends Module
 		if (!Validate::isLoadedObject($product))
 			return true;
 
-		return $this->reindexProduct((int)$params['object']->id);
+		return is_array($this->reindexProduct((int)$params['object']->id));
 	}
 
 	public function hookActionObjectProductUpdateAfter($params)
 	{
-		return $this->reindexProduct((int)$params['object']->id);
+		return is_array($this->reindexProduct((int)$params['object']->id));
 	}
 
 	public function hookActionObjectProductDeleteAfter($params)
