@@ -496,13 +496,6 @@ function reloadElasticsearchContent(params_plus, url_only)
         data += '&n=' + selected_pagination;
     }
 
-	var slideUp = true;
-	if (params_plus == undefined)
-	{
-		params_plus = '';
-		slideUp = false;
-	}
-
 	// Get nb items per page
 	var n = '';
 	if (params_plus)
@@ -513,12 +506,17 @@ function reloadElasticsearchContent(params_plus, url_only)
 		});
 	}
 
+    if (typeof params_plus == 'undefined' || !params_plus) {
+        params_plus = '';
+    }
+
     var ajax_call_data;
 
-    if (typeof(url_only) != 'undefined' && url_only)
-        ajax_call_data = params_plus+'&submitElasticsearchFilter=1&token='+static_token;
-    else
-        ajax_call_data = data+params_plus+n+'&submitElasticsearchFilter=1&token='+static_token;
+    if (typeof(url_only) != 'undefined' && url_only) {
+        ajax_call_data = params_plus + '&submitElasticsearchFilter=1&token=' + static_token;
+    } else {
+        ajax_call_data = data + params_plus + n + '&submitElasticsearchFilter=1&token=' + static_token;
+    }
 
 	ajaxQuery = $.ajax(
 	{
@@ -530,6 +528,8 @@ function reloadElasticsearchContent(params_plus, url_only)
 		cache: false,
 		success: function(result)
 		{
+            if (typeof result.time != 'undefined')
+                console.debug(result.time);
             var $oldCenterColumn = $('#old_center_column');
             if ($oldCenterColumn.length > 0)
             {
@@ -636,8 +636,10 @@ function reloadElasticsearchContent(params_plus, url_only)
 
 			lockLocationChecking = true;
 
-			if(slideUp)
-				$.scrollTo('.product_list', 400);
+            $('html, body').animate({
+                scrollTop: $('.product_list').offset().top
+            }, 400);
+
 			updateProductUrl();
 
 			$('.hide-action').each(function() {

@@ -15,6 +15,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
     const FILTER_TYPE_MANUFACTURER = 'manufacturer';
     const FILTER_TYPE_ATTRIBUTE_GROUP = 'id_attribute_group';
     const FILTER_TYPE_FEATURE = 'id_feature';
+    const FILTER_TYPE_CATEGORY = 'category';
 
     const FILTER_STYLE_SLIDER = 0;
     const FILTER_STYLE_INPUTS_AREA = 1;
@@ -28,6 +29,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
     public static $search_service;
     public $enabled_filters;
     public $hide_0_values;
+    public $full_tree;
 
     protected $filters_products_counts;
 
@@ -38,7 +40,10 @@ abstract class AbstractFilter extends Brad\AbstractLogger
     public function __construct($service_type)
     {
         self::$search_service = SearchService::getInstance($service_type);
+
+        // Loading up some settings
         $this->hide_0_values = (int)Configuration::get('ELASTICSEARCH_HIDE_0_VALUES');
+        $this->full_tree = (int)Configuration::get('ELASTICSEARCH_FULL_TREE');
     }
 
     /**
@@ -77,6 +82,9 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                 case self::FILTER_TYPE_FEATURE:
                     $filter = $this->getFeatureFilter($enabled_filter);
                     break;
+                case self::FILTER_TYPE_CATEGORY:
+                    $filter = $this->getCategoryFilter($enabled_filter);
+                    break;
             }
 
             //Merging filters to one array
@@ -102,8 +110,21 @@ abstract class AbstractFilter extends Brad\AbstractLogger
 
         $this->filters = $filters;
 
+        $selected_filters = $this->getSelectedFilters();
+
+        //@todo unset price and weight filters from $selected_filters if they are on default values
+        // it might not be necessary though
+
+        $filters_count = 0;
+
+        foreach ($selected_filters as $selected_filter) {
+            $filters_count += count($selected_filter);
+        }
+
         Context::getContext()->smarty->assign(array(
             'filters' => $filters,
+            'selected_filters' => $selected_filters,
+            'n_filters' => $filters_count,
             'nbr_filterBlocks' => count($this->enabled_filters),
             'id_elasticsearch_category' => $id_category,
             'elasticsearchSliderName' => $translate,
@@ -114,9 +135,14 @@ abstract class AbstractFilter extends Brad\AbstractLogger
         return Context::getContext()->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'hook/column.tpl');
     }
 
+    /*
+     * Sorts filters by position ascending
+     */
     private function sortFilters(&$filters)
-    {//todo
-
+    {
+        usort($filters, function($a, $b) {
+            return $a['position'] - $b['position'];
+        });
     }
 
     public function getFilters()
@@ -130,6 +156,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
      */
     public function ajaxCall()
     {
+        $t = microtime(true);
         $id_category = (int)Tools::getValue('id_elasticsearch_category');
         //todo avoid using category object
         $category = new Category($id_category, (int)Context::getContext()->cookie->id_lang);
@@ -182,7 +209,8 @@ abstract class AbstractFilter extends Brad\AbstractLogger
             'current_friendly_url' => $this->getCurrentFriendlyUrl(),
             'filters' => $this->getFilters(),
             'nbRenderedProducts' => $pagination_variables['nb_products'],
-            'nbAskedProducts' => $pagination_variables['n']
+            'nbAskedProducts' => $pagination_variables['n'],
+            'time' => microtime(true) - $t
         );
     }
 
