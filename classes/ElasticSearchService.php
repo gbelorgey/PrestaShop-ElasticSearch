@@ -174,32 +174,36 @@ class ElasticSearchService extends SearchService
 
         $body = array();
         $body['reference'] = $product->reference;
+        
+        if (is_array($product->name)) {
+            foreach ($product->name as $id_lang => $name)
+            {
+                $category_link_rewrite = Category::getLinkRewrite((int)$product->id_category_default, $id_lang);
 
-        foreach ($product->name as $id_lang => $name)
-        {
-            $category_link_rewrite = Category::getLinkRewrite((int)$product->id_category_default, $id_lang);
-
-            $body['name_'.$id_lang] = $name;
-            $body['link_rewrite_'.$id_lang] = $product->link_rewrite[$id_lang];
-            $body['description_short_'.$id_lang] = $product->description_short[$id_lang];
-            $body['description_'.$id_lang] = $product->description[$id_lang];
-            $body['default_category_link_rewrite_'.$id_lang] = $category_link_rewrite;
-            $body['link_'.$id_lang] = Context::getContext()->link->getProductLink((int)$product->id, $product->link_rewrite[$id_lang], $category_link_rewrite, $product->ean13);
-            $body['search_keywords_'.$id_lang][] = $product->reference;
-            $body['search_keywords_'.$id_lang][] = $name;
-            $body['search_keywords_'.$id_lang][] = strip_tags($product->description[$id_lang]);
-            $body['search_keywords_'.$id_lang][] = strip_tags($product->description_short[$id_lang]);
-            $body['search_keywords_'.$id_lang][] = $product->manufacturer_name;
+                $body['name_'.$id_lang] = $name;
+                $body['link_rewrite_'.$id_lang] = $product->link_rewrite[$id_lang];
+                $body['description_short_'.$id_lang] = $product->description_short[$id_lang];
+                $body['description_'.$id_lang] = $product->description[$id_lang];
+                $body['default_category_link_rewrite_'.$id_lang] = $category_link_rewrite;
+                $body['link_'.$id_lang] = Context::getContext()->link->getProductLink((int)$product->id, $product->link_rewrite[$id_lang], $category_link_rewrite, $product->ean13);
+                $body['search_keywords_'.$id_lang][] = $product->reference;
+                $body['search_keywords_'.$id_lang][] = $name;
+                $body['search_keywords_'.$id_lang][] = strip_tags($product->description[$id_lang]);
+                $body['search_keywords_'.$id_lang][] = strip_tags($product->description_short[$id_lang]);
+                $body['search_keywords_'.$id_lang][] = $product->manufacturer_name;
+            }
         }
-
         $category = new Category($product->id_category_default);
-
+        if (is_array($product->name)) {
         foreach ($category->name as $id_lang => $category_name)
             $body['search_keywords_'.$id_lang][] = $category_name;
+        }
 
-        foreach (Language::getLanguages() as $lang)
-            $body['search_keywords_'.$lang['id_lang']] = Tools::strtolower(implode(' ', array_filter($body['search_keywords_'.$lang['id_lang']])));
-
+        foreach (Language::getLanguages() as $lang) {
+            if (isset($body['search_keywords_'.$lang['id_lang']])) {
+                $body['search_keywords_'.$lang['id_lang']] = Tools::strtolower(implode(' ', array_filter($body['search_keywords_'.$lang['id_lang']])));
+            }
+        }
         $body['quantity'] = $product->quantity;
         $body['price'] = $product->price;
 
