@@ -103,6 +103,12 @@ class ElasticSearchService extends SearchService
 
         $attributes = Product::getAttributesInformationsByProduct($product->id);
         $features = $product->getFeatures();
+        if (class_exists('FeatureCombination', true)) {
+            $featurecombination = FeatureCombination::getFeatureValuesExistsOfProductCombination($product->id);
+            if (count($featurecombination) > 0) {
+                $features = array_merge($features, $featurecombination);
+            }
+        }
 
         $body = array();
         $body['categories'] = $product->getCategories();
@@ -151,7 +157,7 @@ class ElasticSearchService extends SearchService
                     $body['lang_feature_value_'.$feature['id_feature_value'].'_'.$id_lang] = $feature_value_obj->value[$id_lang];
                 }
 
-                $body['feature_'.$feature['id_feature']] = $feature['id_feature_value'];
+                $body['feature_'.$feature['id_feature']][] = $feature['id_feature_value'];
             }
 
         return array_merge($body, $this->getProductPricesForIndexing($product->id));
