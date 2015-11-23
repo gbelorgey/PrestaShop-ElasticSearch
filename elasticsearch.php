@@ -836,7 +836,7 @@ class ElasticSearch extends Module
             return true;
 
         if (Validate::isLoadedObject($product))
-            return $search->deleteDocumentById($this->context->shop->id, (int)$params['object']->id);
+            $search->deleteDocumentById($this->context->shop->id, (int)$params['object']->id);
 
         foreach (Shop::getShops(false, null, true) as $id_shop)
             if (!$search->deleteDocumentById($id_shop, (int)$params['object']->id))
