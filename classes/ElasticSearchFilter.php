@@ -285,7 +285,8 @@ class ElasticSearchFilter extends AbstractFilter
             'show_price',
             'price',
             'quantity',
-            'id_combination_default'
+            'id_combination_default',
+            'manufacturer_name'
         );
 
         $partial_fields = $this->getPartialFields($required_fields);
@@ -336,7 +337,8 @@ class ElasticSearchFilter extends AbstractFilter
                 'price' => $this->extractProductField($product, 'price'),
                 'price_tax_exc' => $this->extractProductField($product, 'price'),
                 'allow_oosp' => $allow_oosp,
-                'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id)
+                'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id),
+                'manufacturer_name' => $this->extractProductField($product, 'manufacturer_name')
             );
         }
 
