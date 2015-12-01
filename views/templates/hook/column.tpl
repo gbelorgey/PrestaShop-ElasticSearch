@@ -59,7 +59,7 @@
 						</div>
 					{/if}
 					{foreach from=$filters item=filter}
-					{if isset($filter.values)}
+					{if isset($filter.values) && count($filter.values) > 0}
 					{if isset($filter.slider)}
 					<div class="elasticsearch_{$filter.type|escape:'htmlall':'UTF-8'}" style="display: none;">
 						{else}
