@@ -705,9 +705,12 @@ class ElasticSearch extends Module
         return $this->displayError(implode('<br />', $errors));
     }
 
-    public function getSearchServiceObject()
+    public function getSearchServiceObject($id_shop = null)
     {
-        return SearchService::getInstance(SearchService::ELASTICSEARCH_INSTANCE);
+        if (is_null($id_shop)) {
+            $id_shop = Context::getContext()->shop->id;
+        }
+        return SearchService::getInstance(SearchService::ELASTICSEARCH_INSTANCE, $id_shop);
     }
 
     private function reindexProduct($id_product)
