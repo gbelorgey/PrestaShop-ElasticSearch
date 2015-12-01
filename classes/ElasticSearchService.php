@@ -26,9 +26,9 @@ class ElasticSearchService extends SearchService
 
     private $host = null;
 
-    public function __construct($module_name = 'elasticsearch')
+    public function __construct($id_shop, $module_name = 'elasticsearch')
     {
-        $this->initIndex();
+        $this->initIndex($id_shop);
         $this->module_instance = Module::getInstanceByName($module_name);
         $this->host = Configuration::get('ELASTICSEARCH_HOST');
 
@@ -38,15 +38,15 @@ class ElasticSearchService extends SearchService
         $this->initClient();
     }
 
-    protected function initIndexPrefix()
+    protected function initIndexPrefix($id_shop, $force = false)
     {
-        if ($this->index_prefix)
+        if ($this->index_prefix && !$force)
             return;
 
-        if (!($prefix = Configuration::get('ELASTICSEARCH_INDEX_PREFIX')))
-        {
+        $prefix = Configuration::get('ELASTICSEARCH_INDEX_PREFIX', null, null, $id_shop);
+        if (!$prefix || $force) {
             $prefix = Tools::strtolower(Tools::passwdGen()).'_';
-            Configuration::updateValue('ELASTICSEARCH_INDEX_PREFIX', $prefix);
+            Configuration::updateValue('ELASTICSEARCH_INDEX_PREFIX', $prefix, false, null, $id_shop);
         }
 
         $this->index_prefix = $prefix;
@@ -174,7 +174,7 @@ class ElasticSearchService extends SearchService
 
         $body = array();
         $body['reference'] = $product->reference;
-        
+
         if (is_array($product->name)) {
             foreach ($product->name as $id_lang => $name)
             {
@@ -194,9 +194,10 @@ class ElasticSearchService extends SearchService
             }
         }
         $category = new Category($product->id_category_default);
-        if (is_array($product->name)) {
-        foreach ($category->name as $id_lang => $category_name)
-            $body['search_keywords_'.$id_lang][] = $category_name;
+        if (Validate::isLoadedObject($category) && is_array($category->name)) {
+            foreach ($category->name as $id_lang => $category_name) {
+                $body['search_keywords_'.$id_lang][] = $category_name;
+            }
         }
 
         foreach (Language::getLanguages() as $lang) {
@@ -219,14 +220,19 @@ class ElasticSearchService extends SearchService
         return array_merge($this->generateSearchKeywordsBodyByProduct($product), $this->generateFilterBodyByProduct($product));
     }
 
-    public function generateSearchBodyByCategory($id_category)
+    public function generateSearchBodyByCategory($category)
     {
-        $category = new Category($id_category);
+        if (!is_object($category)) {
+            $category = new Category($id_category);
+        }
 
         $body = array();
 
-        foreach ($category->name as $id_lang => $name)
-            $body['name_'.$id_lang] = $name;
+        if (is_array($category->name)) {
+            foreach ($category->name as $id_lang => $name) {
+                $body['name_'.$id_lang] = $name;
+            }
+        }
 
         $body['id_parent'] = $category->id_parent;
         $body['level_depth'] = $category->level_depth;
@@ -369,8 +375,10 @@ class ElasticSearchService extends SearchService
     {
         try
         {
-            if ($delete_old)
+            if ($delete_old) {
                 $this->deleteShopIndex();
+                $this->initIndex(null, true);
+            }
 
             if (!$this->createIndexForCurrentShop())
                 return false;
@@ -414,19 +422,25 @@ class ElasticSearchService extends SearchService
         if (!$shop_categories)
             return true;
 
-        foreach ($shop_categories as $category)
-        {
-            if ($this->documentExists($id_shop, (int)$category['id_category'], 'categories'))
+        foreach ($shop_categories as $category) {
+            if ($this->documentExists($id_shop, (int)$category['id_category'], 'categories')) {
                 continue;
+            }
+
+            $category_object = new Category((int)$category['id_category']);
+            if (!Validate::isLoadedObject($category_object)) {
+                continue;
+            }
 
             $result = $this->createDocument(
-                $this->generateSearchBodyByCategory((int)$category['id_category']),
+                $this->generateSearchBodyByCategory($category_object),
                 $category['id_category'],
                 'categories'
             );
 
-            if (!isset($result['created']) || $result['created'] !== true)
+            if (!isset($result['created']) || $result['created'] !== true) {
                 $this->errors[] = sprintf($this->module_instance->l('Unable to index category #%d'), $category['id_category']);
+            }
         }
 
         return $this->errors ? false : true;
