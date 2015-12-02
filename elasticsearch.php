@@ -713,7 +713,7 @@ class ElasticSearch extends Module
         return SearchService::getInstance(SearchService::ELASTICSEARCH_INSTANCE, $id_shop);
     }
 
-    private function reindexProduct($id_product)
+    private function reindexProduct($id_product, $delete = false)
     {
         try
         {
@@ -722,11 +722,17 @@ class ElasticSearch extends Module
             //Deleting the document first
             $search->deleteDocumentById($this->context->shop->id, $id_product);
 
-            //Generating a new body for deleted document
-            $body = $search->generateSearchBodyByProduct($id_product);
+            // Only reindex the product if it is still active and visible for search
+            if ($delete) {
+                return true;
+            }
 
-            //creating a document with newly generated body
-            return $search->createDocument($body, (int)$id_product);
+            $body = $search->generateSearchBodyByProduct($id_product);
+            $res = $search->createDocument($body, (int)$id_product);
+            if (is_array($res) && $res['created'] == true) {
+                return true;
+            }
+            return false;
         } catch (Exception $e) {
             return false;
         }
@@ -817,16 +823,31 @@ class ElasticSearch extends Module
     public function hookActionObjectProductAddAfter($params)
     {
         $product = new Product((int)$params['object']->id);
-
-        if (!Validate::isLoadedObject($product))
+        if (!Validate::isLoadedObject($product)) {
             return true;
+        }
 
-        return is_array($this->reindexProduct((int)$params['object']->id));
+        $delete = false;
+        if (!$params['object']->active) {
+            $delete = true;
+        }
+        if ($params['object']->visibility != 'both' && $params['object']->visibility != 'search') {
+            $delete = true;
+        }
+        return $this->reindexProduct((int)$params['object']->id, $delete);
     }
 
     public function hookActionObjectProductUpdateAfter($params)
     {
-        return is_array($this->reindexProduct((int)$params['object']->id));
+        $delete = false;
+        if (!$params['object']->active) {
+            $delete = true;
+        }
+        if ($params['object']->visibility != 'both' && $params['object']->visibility != 'search') {
+            $delete = true;
+        }
+
+        return $this->reindexProduct((int)$params['object']->id, $delete);
     }
 
     public function hookActionObjectProductDeleteAfter($params)
