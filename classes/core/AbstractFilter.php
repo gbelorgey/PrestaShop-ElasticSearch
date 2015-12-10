@@ -122,6 +122,8 @@ abstract class AbstractFilter extends Brad\AbstractLogger
             }
         }
 
+        $id_lang = Context::getContext()->language->id;
+        $category = new Category($id_category, $id_lang);
         Context::getContext()->smarty->assign(array(
             'filters' => $filters,
             'selected_filters' => $selected_filters,
@@ -130,7 +132,8 @@ abstract class AbstractFilter extends Brad\AbstractLogger
             'id_elasticsearch_category' => $id_category,
             'elasticsearchSliderName' => $translate,
             'hide_0_values' => $this->hide_0_values,
-            'elasticsearch_show_qties' => (int)Configuration::get('ELASTICSEARCH_SHOW_QTIES')
+            'elasticsearch_show_qties' => (int)Configuration::get('ELASTICSEARCH_SHOW_QTIES'),
+            'subcategories' => $category->getSubCategories($id_lang)
         ));
 
         return Context::getContext()->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'hook/column.tpl');

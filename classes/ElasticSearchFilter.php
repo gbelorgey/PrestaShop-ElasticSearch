@@ -313,6 +313,26 @@ class ElasticSearchFilter extends AbstractFilter
                 $allow_oosp == AbstractFilter::PRODUCT_OOS_ALLOW_ORDERS ||
                 ($allow_oosp == AbstractFilter::PRODUCT_OOS_USE_GLOBAL && $global_allow_oosp);
 
+            $price = Product::getPriceStatic(
+                $product['_id'],
+                true,
+                null,
+                2
+            );
+            $price_without_reduction = Product::getPriceStatic(
+                $product['_id'],
+                true,
+                null,
+                2,
+                null,
+                false,
+                false
+            );
+            $reduction_display = 0;
+            if ($price_without_reduction > $price) {
+                $reduction_display = round((1 - $price/$price_without_reduction) * 100);
+            }
+
             $products_data[] = array(
                 'id_product' => $product['_id'],
                 'out_of_stock' => $this->extractProductField($product, 'out_of_stock'),
@@ -334,8 +354,10 @@ class ElasticSearchFilter extends AbstractFilter
                 'show_price' => $this->extractProductField($product, 'show_price'),
                 'quantity' => $this->extractProductField($product, 'quantity'),
                 'id_product_attribute' => $this->extractProductField($product, 'id_combination_default'),
-                'price' => $this->extractProductField($product, 'price'),
+                'price' => $price,
                 'price_tax_exc' => $this->extractProductField($product, 'price'),
+                'price_without_reduction' => $price_without_reduction,
+                'reduction_display' => $reduction_display,
                 'allow_oosp' => $allow_oosp,
                 'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id),
                 'manufacturer_name' => $this->extractProductField($product, 'manufacturer_name')

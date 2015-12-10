@@ -362,10 +362,9 @@ class ElasticSearchService extends SearchService
             }
 
         $values = array();
-        foreach ($currency_list as $currency)
-        {
-            $values['price_min_'.(int)$currency['id_currency']] = (int)$min_price[$currency['id_currency']];
-            $values['price_max_'.(int)$currency['id_currency']] = (int)Tools::ps_round($max_price[$currency['id_currency']] * (100 + $max_tax_rate) / 100, 0);
+        foreach ($currency_list as $currency) {
+            $values['price_min_'.(int)$currency['id_currency']] = (int)floor($min_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
+            $values['price_max_'.(int)$currency['id_currency']] = (int)ceil($max_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
         }
 
         return $values;
