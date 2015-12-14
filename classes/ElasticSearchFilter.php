@@ -1086,6 +1086,13 @@ class ElasticSearchFilter extends AbstractFilter
             }
         }
 
+        usort($manufacturers_values, function ($a, $b) {
+            if ($a['name'] == $b['name']) {
+                return 0;
+            }
+            return ($a['name'] < $b['name']) ? -1 : 1;
+        });
+
         return array(
             'type_lite' => self::FILTER_TYPE_MANUFACTURER,
             'type' => self::FILTER_TYPE_MANUFACTURER,
