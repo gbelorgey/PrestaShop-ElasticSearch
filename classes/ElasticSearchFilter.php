@@ -1288,7 +1288,14 @@ class ElasticSearchFilter extends AbstractFilter
                     ? $features_values_names[$id_feature_value]
                     : '';
             }
+            usort($feature['values'], function ($a, $b) {
+                if ($a['name'] == $b['name']) {
+                    return 0;
+                }
+                return ($a['name'] < $b['name']) ? -1 : 1;
+            });
         }
+
 
         return $feature_array;
     }
