@@ -1086,7 +1086,7 @@ class ElasticSearchFilter extends AbstractFilter
             }
         }
 
-        usort($manufacturers_values, function ($a, $b) {
+        uasort($manufacturers_values, function ($a, $b) {
             if ($a['name'] == $b['name']) {
                 return 0;
             }
@@ -1288,7 +1288,7 @@ class ElasticSearchFilter extends AbstractFilter
                     ? $features_values_names[$id_feature_value]
                     : '';
             }
-            usort($feature['values'], function ($a, $b) {
+            uasort($feature['values'], function ($a, $b) {
                 if ($a['name'] == $b['name']) {
                     return 0;
                 }
