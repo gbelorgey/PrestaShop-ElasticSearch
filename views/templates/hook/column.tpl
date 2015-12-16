@@ -15,7 +15,7 @@
 {if $nbr_filterBlocks != 0}
     <div id="elasticsearch_block_left" class="block">
         <div class="block_content">
-            <a href="#" class="elasticsearch-mobile-toggle button_empty js-filter-mobile">
+            <a href="#" class="elasticsearch-mobile-toggle button-empty js-filter-mobile">
                 Filtres
             </a>
             <form action="#" id="elasticsearch_form">
