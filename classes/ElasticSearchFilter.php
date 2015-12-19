@@ -1217,7 +1217,9 @@ class ElasticSearchFilter extends AbstractFilter
         $feature_array = array();
 
         $features_names = array();
+        $features_values = array();
         $features_values_names = array();
+        $features_values_positions = array();
 
         foreach ($filter as $id_feature => $feature_filter) {
             $hide_filter = true;
@@ -1246,11 +1248,12 @@ class ElasticSearchFilter extends AbstractFilter
 
                 $hide_filter = false;
 
-                $features_values_names[] = $id_feature_value;
+                $features_values[] = $id_feature_value;
 
                 $feature_array[$id_feature]['values'][$id_feature_value] = array(
                     'nbr' => (int)$nbr,
-                    'name' => ''
+                    'name' => '',
+                    'position' => 0
                 );
 
                 if (!empty($selected_filters[self::FILTER_TYPE_FEATURE])
@@ -1273,10 +1276,16 @@ class ElasticSearchFilter extends AbstractFilter
             'id_feature'
         );
         $features_values_names = $this->getModuleInstance()->getObjectsNamesByIds(
-            $features_values_names,
+            $features_values,
             'feature_value_lang',
             'id_feature_value',
             'value'
+        );
+        $features_values_positions = $this->getModuleInstance()->getObjectsPositionsByIds(
+            $features_values,
+            'feature_value',
+            'id_feature_value',
+            'position'
         );
 
         //adding names to values
@@ -1287,12 +1296,15 @@ class ElasticSearchFilter extends AbstractFilter
                 $fields['name'] = isset($features_values_names[$id_feature_value])
                     ? $features_values_names[$id_feature_value]
                     : '';
+                $fields['position'] = isset($features_values_positions[$id_feature_value])
+                    ? $features_values_positions[$id_feature_value]
+                    : '';
             }
             uasort($feature['values'], function ($a, $b) {
-                if ($a['name'] == $b['name']) {
+                if ($a['position'] == $b['position']) {
                     return 0;
                 }
-                return ($a['name'] < $b['name']) ? -1 : 1;
+                return ($a['position'] < $b['position']) ? -1 : 1;
             });
         }
 

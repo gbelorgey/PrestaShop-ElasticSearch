@@ -922,6 +922,25 @@ class ElasticSearch extends Module
         return $result;
     }
 
+    public function getObjectsPositionsByIds(array $ids, $table, $id_column, $position_column = 'position')
+    {
+        if (empty($ids))
+            return array();
+
+        $resource = Db::getInstance()->query('
+            SELECT `'.bqSQL($id_column).'`, `'.bqSQL($position_column).'`
+            FROM `'._DB_PREFIX_.bqSQL($table).'`
+            WHERE `'.bqSQL($id_column).'` IN ('.(implode(',', array_map('intval', $ids))).')'
+        );
+
+        $result = array();
+
+        while ($row = Db::getInstance()->nextRow($resource))
+            $result[$row[$id_column]] = $row[$position_column];
+
+        return $result;
+    }
+
     /**
      * Gets is_color_group paramteter for attributes groups
      * @param array $ids attributes groups
