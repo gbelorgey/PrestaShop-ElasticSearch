@@ -562,14 +562,59 @@ class ElasticSearchFilter extends AbstractFilter
     public function getQueryFromSearchValues(array $search_values)
     {
         $query = array();
-
+        $should_query = array();
         foreach ($search_values as $key => $value) {
-            if (in_array($key, array('categories', 'condition', 'manufacturer', 'in_stock', 'id_feature', 'id_attribute_group'))) {
+            if (in_array($key, array('categories', 'condition', 'manufacturer', 'in_stock', 'id_attribute_group'))) {
                 $query[] = array(
                     'bool' => array(
                         'should' => $value
                     )
                 );
+            } elseif ($key == 'id_feature') {
+                $count = count($value);
+                if ($count > 1) {
+                    for ($i = 0; $i < $count; $i++) {
+                        $feature_value[$i] = array_keys($value[$i]['term'])[0];
+                    }
+
+                    $feature_value = array_count_values($feature_value);
+                    if (is_array($feature_value) && count($feature_value) > 1) {
+                        for ($i = 0; $i < $count; $i++) {
+                            $term = array_keys($value[$i]['term'])[0];
+                            if (array_key_exists($term, $feature_value)) {
+                                if ($feature_value[$term] > 1) {
+                                    $should_query[$i] = $value[$i];
+                                } else {
+                                    $query[] = array(
+                                        'bool' => array(
+                                            'should' => array($value[$i])
+                                        )
+                                    );
+                                }
+                            }
+                        }
+
+                        if (is_array($should_query) && count($should_query) > 0) {
+                            $query[] = array(
+                                'bool' => array(
+                                    'should' => $should_query
+                                )
+                            );
+                        }
+                    } else {
+                        $query[] = array(
+                            'bool' => array(
+                                'should' => $value
+                            )
+                        );
+                    }
+                } else {
+                    $query[] = array(
+                        'bool' => array(
+                            'should' => $value
+                        )
+                    );
+                }
             } elseif ($key == 'weight') {
                 $query[] = array(
                     'range' => array(
