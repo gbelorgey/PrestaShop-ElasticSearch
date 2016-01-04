@@ -591,6 +591,9 @@ class ElasticSearchService extends SearchService
             $aggregation_query[$field['alias']]['aggs'][$field['alias']][$field['aggregation_type']] = array(
                 'field' => $field['field']
             );
+            if ($field['aggregation_type'] == 'terms') {
+                $aggregation_query[$field['alias']]['aggs'][$field['alias']][$field['aggregation_type']]['size'] = 0;
+            }
         }
 
         return $aggregation_query;
