@@ -43,8 +43,3 @@ class ComposerAutoloaderInitf16291e18964c814b188837cb290a440
         return $loader;
     }
 }
-
-function composerRequiref16291e18964c814b188837cb290a440($file)
-{
-    require $file;
-}
