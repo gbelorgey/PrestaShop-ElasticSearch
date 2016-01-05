@@ -20,8 +20,8 @@
             </a>
             <form action="#" id="elasticsearch_form">
                 <div>
-                    {if isset($selected_filters) && $n_filters > 0}
-                        <div id="enabled_filters">
+                    <div id="enabled_filters">
+                        {if isset($selected_filters) && $n_filters > 0}
                             <span class="elasticsearch_subtitle" style="float: none;">
                                 {l s='Enabled filters:' mod='elasticsearch'}
                             </span>
@@ -56,8 +56,8 @@
                                     {/foreach}
                                 {/foreach}
                             </ul>
-                        </div>
-                    {/if}
+                        {/if}
+                    </div>
                     {if isset($subcategories) && count($subcategories) > 0}
                         <div class="category__sub">
                             <div class="category__sub__title js-filter-toggle">
