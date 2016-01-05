@@ -8,6 +8,7 @@ class ElasticSearchFilter extends AbstractFilter
 
     public static $cache = array();
     public $id_category;
+    public $id_manufacturer;
     public $all_category_products = array();
     public $price_filter = array();
     public $weight_filter = array();
@@ -17,6 +18,7 @@ class ElasticSearchFilter extends AbstractFilter
     {
         parent::__construct(SearchService::ELASTICSEARCH_INSTANCE);
         $this->id_category = (int)Tools::getValue('id_category', Tools::getValue('id_elasticsearch_category'));
+        $this->id_manufacturer = (int)Tools::getValue('id_manufacturer', Tools::getValue('id_elasticsearch_manufacturer'));
     }
 
     public function getFiltersProductsCountsAggregationQuery($enabled_filters)
@@ -506,7 +508,7 @@ class ElasticSearchFilter extends AbstractFilter
         $query['bool']['must'] = $this->getQueryFromSearchValues($search_values);
 
         //completing categories query
-        $query['bool']['must'][] = $this->getCurrentCategoryQuery();
+        $query['bool']['must'][] = $this->getCurrentControllerQuery();
 
         return $query;
     }
@@ -516,37 +518,47 @@ class ElasticSearchFilter extends AbstractFilter
      * subcategories in query too.
      * @return array query for category/ies
      */
-    public function getCurrentCategoryQuery()
+    public function getCurrentControllerQuery()
     {
-        if (!$this->full_tree) {
-            return array(
-                'term' => array(
-                    'categories' => $this->id_category
-                )
-            );
-        }
-
-        $subcategories = $this->getSubcategories(true);
-
-        if ($subcategories) {
-            $query = array(
-                'bool' => array(
-                    'should' => array()
-                )
-            );
-
-            foreach ($subcategories as $subcategory) {
-                $query['bool']['should'][] = array(
+        if ($this->id_category) {
+            if (!$this->full_tree) {
+                return array(
                     'term' => array(
-                        'categories' => $subcategory['id_category']
+                        'categories' => $this->id_category
                     )
                 );
             }
 
-        } else {
+            $subcategories = $this->getSubcategories(true);
+
+            if ($subcategories) {
+                $query = array(
+                    'bool' => array(
+                        'should' => array()
+                    )
+                );
+
+                foreach ($subcategories as $subcategory) {
+                    $query['bool']['should'][] = array(
+                        'term' => array(
+                            'categories' => $subcategory['id_category']
+                        )
+                    );
+                }
+
+            } else {
+                $query = array(
+                    'term' => array(
+                        'categories' => $this->id_category
+                    )
+                );
+            }
+        }
+
+        if ($this->id_manufacturer) {
             $query = array(
                 'term' => array(
-                    'categories' => $this->id_category
+                    'id_manufacturer' => $this->id_manufacturer
                 )
             );
         }
@@ -695,16 +707,17 @@ class ElasticSearchFilter extends AbstractFilter
     }
 
     /**
-     * @param $id_category int category ID
+     * @param $id_entity int entity ID
+     * @param $entity string entity
      * @return array enabled filters for given category
      */
-    public function getEnabledFiltersByCategory($id_category)
+    public function getEnabledFilters($id_entity, $entity = 'category')
     {
         try {
             $filters = Db::getInstance(_PS_USE_SQL_SLAVE_)->query(
                 'SELECT `id_value`, `type`, `position`, `filter_type`, `filter_show_limit`
-                FROM `'._DB_PREFIX_.'elasticsearch_category`
-                WHERE `id_category` = "'.(int)$id_category.'"
+                FROM `'._DB_PREFIX_.'elasticsearch_'.pSQL($entity).'`
+                WHERE `id_'.pSQL($entity).'` = '.(int)$id_entity.'
                     AND `id_shop` = "'.(int)Context::getContext()->shop->id.'"
                 GROUP BY `type`, `id_value`
                 ORDER BY `position` ASC'
@@ -723,7 +736,7 @@ class ElasticSearchFilter extends AbstractFilter
 
             return $formatted_filters;
         } catch (Exception $e) {
-            self::log('Unable to get filters from database', array('id_category' => $id_category));
+            self::log('Unable to get filters from database', array('id_category' => $id_entity));
             return array();
         }
     }
@@ -734,12 +747,6 @@ class ElasticSearchFilter extends AbstractFilter
     public function getSelectedFilters()
     {
         if ($this->selected_filters === null) {
-            $id_category = $this->id_category;
-
-            if ($id_category == Configuration::get('PS_HOME_CATEGORY') || !$id_category) {
-                return null;
-            }
-
             /* Analyze all the filters selected by the user and store them into a tab */
             $selected_filters = array(
                 'category' => array(),

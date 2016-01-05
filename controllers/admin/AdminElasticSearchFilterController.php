@@ -80,9 +80,15 @@ class AdminElasticSearchFilterController extends ModuleAdminController
     {
         $categories = Category::getRootCategories((int)$this->context->language->id);
         $id_root = (int)$categories[0]['id_category'];
+        $root_category = Shop::getContext() == Shop::CONTEXT_SHOP ? new Category((int)$this->context->shop->id_category) : new Category((int)$id_root);
 
-        $root_category = Shop::getContext() == Shop::CONTEXT_SHOP && Tools::isSubmit('id_shop') ? new Category((int)$this->context->shop->id_category) :
-            new Category((int)$id_root);
+        $manufacturers = Manufacturer::getManufacturers();
+        $manufacturers = array_map(function($m) {
+            return array(
+                'id_manufacturer' => $m['id_manufacturer'],
+                'name' => $m['name']
+            );
+        }, $manufacturers);
 
         $this->object = new ElasticSearchTemplate();
 
@@ -111,6 +117,17 @@ class AdminElasticSearchFilterController extends ModuleAdminController
                         'use_search' => false,
                         'use_checkbox' => true
                     ),
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'name' => 'manufacturerBox',
+                    'label' => $this->l(' Manufacturers used for this template'),
+                    'required' => true,
+                    'values' => array(
+                        'id' => 'id_manufacturer',
+                        'name' => 'name',
+                        'query' => $manufacturers
+                    )
                 )
             ),
             'submit' => array(
@@ -135,10 +152,13 @@ class AdminElasticSearchFilterController extends ModuleAdminController
             'name' => 'templateSettingsManagement'
         );
 
+        foreach ($this->getSelectedManufacturers() as $id_manufacturer) {
+            $this->fields_value['manufacturerBox_'.$id_manufacturer] = true;
+        }
         $this->fields_value['templateSettingsManagement'] = $this->displayFilterTemplateManagemetList();
     }
 
-    private function getSelectedCategories()
+    protected function getSelectedCategories()
     {
         $elasticsearch_template = new ElasticSearchTemplate((int)Tools::getValue('id_elasticsearch_template'));
 
@@ -171,7 +191,17 @@ class AdminElasticSearchFilterController extends ModuleAdminController
         return $return;
     }
 
-    private function displayFilterTemplateManagemetList()
+    protected function getSelectedManufacturers()
+    {
+        $elasticsearch_template = new ElasticSearchTemplate((int)Tools::getValue('id_elasticsearch_template'));
+        if (!Validate::isLoadedObject($elasticsearch_template)) {
+            return array();
+        }
+        $filters = unserialize($elasticsearch_template->filters);
+        return $filters['manufacturers'];
+    }
+
+    protected function displayFilterTemplateManagemetList()
     {
         $attribute_groups = ElasticSearchTemplate::getAttributes();
         $features = ElasticSearchTemplate::getFeatures();

@@ -199,7 +199,12 @@
                         {/if}
                         {/foreach}
                     </div>
-                    <input type="hidden" name="id_elasticsearch_category" value="{$id_elasticsearch_category|escape:'htmlall':'UTF-8'}" />
+                    {if isset($id_elasticsearch_category)}
+                        <input type="hidden" name="id_elasticsearch_category" value="{$id_elasticsearch_category|escape:'htmlall':'UTF-8'}" />
+                    {/if}
+                    {if isset($id_elasticsearch_manufacturer)}
+                        <input type="hidden" name="id_elasticsearch_manufacturer" value="{$id_elasticsearch_manufacturer|escape:'htmlall':'UTF-8'}" />
+                    {/if}
                     {foreach from=$filters item=filter}
                         {if $filter.type_lite == 'id_attribute_group' && isset($filter.is_color_group) && $filter.is_color_group && $filter.filter_type != 2}
                             {foreach from=$filter.values key=id_value item=value}

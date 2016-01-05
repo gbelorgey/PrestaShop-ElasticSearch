@@ -24,6 +24,7 @@
 					<th class="fixed-width-xs center"><span class="title_box">{l s='ID' mod='elasticsearch'}</span></th>
 					<th><span class="title_box text-left">{l s='Name' mod='elasticsearch'}</span></th>
 					<th class="fixed-width-sm center"><span class="title_box">{l s='Categories' mod='elasticsearch'}</span></th>
+					<th class="fixed-width-sm center"><span class="title_box">{l s='Manufacturers' mod='elasticsearch'}</span></th>
 					<th class="fixed-width-lg"><span class="title_box">{l s='Created on' mod='elasticsearch'}</span></th>
 					<th class="fixed-width-sm"><span class="title_box text-right">{l s='Actions' mod='elasticsearch'}</span></th>
 				</tr>
@@ -34,6 +35,7 @@
 						<td class="center">{$template['id_elasticsearch_template']|intval}</td>
 						<td class="text-left">{$template['name']|escape:'htmlall':'UTF-8'}</td>
 						<td class="center">{$template['n_categories']|intval}</td>
+						<td class="center">{$template['n_manufacturers']|intval}</td>
 						<td>{Tools::displayDate($template['date_add']|escape:'htmlall':'UTF-8', null, true)|escape:'htmlall':'UTF-8'}</td>
 						<td>
 							{if empty($limit_warning)}
