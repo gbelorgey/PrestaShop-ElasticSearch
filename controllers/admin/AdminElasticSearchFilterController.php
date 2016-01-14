@@ -69,6 +69,10 @@ class AdminElasticSearchFilterController extends ModuleAdminController
                     'ELASTICSEARCH_PRICE_USETAX' => array(
                         'type' => 'bool',
                         'title' => $this->l('Use tax to filter price')
+                    ),
+                    'ELASTICSEARCH_SHOW_INSTOCK_FIRST' => array(
+                        'type' => 'bool',
+                        'title' => $this->l('Display out of stock products last')
                     )
                 ),
                 'submit' => array('title' => $this->l('Save'))

@@ -269,6 +269,10 @@ class ElasticSearchFilter extends AbstractFilter
         if ($order_by == 'name') {
             $order_by .= '_'.(int)Context::getContext()->language->id;
         }
+        if (is_null($order_by) && $this->id_category) {
+            $order_by = 'position_'.$this->id_category;
+            $order_way = 'asc';
+        }
 
         $required_fields = array(
             'out_of_stock',

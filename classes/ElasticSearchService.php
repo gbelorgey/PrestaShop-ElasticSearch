@@ -98,8 +98,9 @@ class ElasticSearchService extends SearchService
      */
     private function generateFilterBodyByProduct($product)
     {
-        if (!is_object($product))
+        if (!is_object($product)) {
             $product = new Product($product, true);
+        }
 
         $attributes = Product::getAttributesInformationsByProduct($product->id);
         $features = $product->getFeatures();
@@ -112,6 +113,14 @@ class ElasticSearchService extends SearchService
 
         $body = array();
         $body['categories'] = $product->getCategories();
+        $category_products = Db::getInstance()->executeS(
+            'SELECT cp.`id_category`, cp.`position` '.
+            'FROM `'._DB_PREFIX_.'category_product` cp '.
+            'WHERE `id_product` = '.(int)$product->id
+        );
+        foreach ($category_products as $cp) {
+            $body['position_'.$cp['id_category']] = (int)$cp['position'];
+        }
         $body['condition'] = $product->condition;
         $body['id_manufacturer'] = $product->id_manufacturer;
         $body['manufacturer_name'] = $product->manufacturer_name;
@@ -545,25 +554,31 @@ class ElasticSearchService extends SearchService
         if ($filter !== null)
             $params['body']['filter'] = $filter;
 
-        if ($pagination !== null)
+        if ($pagination !== null) {
             $params['size'] = $pagination;               // how many results *per shard* you want back
+        }
 
         if ($from !== null)
             $params['from'] = $from;
 
-        try
-        {
-            if ($pagination === null && $from === null)
-            {
+        try {
+            if ($pagination === null && $from === null) {
                 $params['search_type'] = 'count';
                 return (int)$this->client->search($params)['hits']['total'];
             }
 
-            if ($order_by && $order_way)
-                $params['sort'] = array($order_by.':'.$order_way);
 
-            if ($aggregation)
-            {
+            if (Configuration::get('ELASTICSEARCH_SHOW_INSTOCK_FIRST') && !$aggregation) {
+                $params['sort'] = array('in_stock_when_global_oos_deny_orders:desc');
+            }
+            if ($order_by && $order_way) {
+                if (!isset($params['sort'])) {
+                    $params['sort'] = array();
+                }
+                $params['sort'][] = $order_by.':'.$order_way;
+            }
+
+            if ($aggregation) {
                 $params['search_type'] = 'count';
                 return $this->client->search($params);
             }
