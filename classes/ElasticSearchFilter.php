@@ -587,49 +587,37 @@ class ElasticSearchFilter extends AbstractFilter
                     )
                 );
             } elseif ($key == 'id_feature') {
-                $count = count($value);
-                if ($count > 1) {
-                    for ($i = 0; $i < $count; $i++) {
-                        $feature_value[$i] = array_keys($value[$i]['term'])[0];
+                $features = array();
+                foreach ($value as $val) {
+                    $term = array_keys($val['term'])[0];
+                    if (!isset($features[$term])) {
+                        $features[$term] = array();
                     }
+                    $features[$term][] = $val['term'][$term];
+                }
 
-                    $feature_value = array_count_values($feature_value);
-                    if (is_array($feature_value) && count($feature_value) > 1) {
-                        for ($i = 0; $i < $count; $i++) {
-                            $term = array_keys($value[$i]['term'])[0];
-                            if (array_key_exists($term, $feature_value)) {
-                                if ($feature_value[$term] > 1) {
-                                    $should_query[$i] = $value[$i];
-                                } else {
-                                    $query[] = array(
-                                        'bool' => array(
-                                            'should' => array($value[$i])
-                                        )
-                                    );
-                                }
-                            }
-                        }
-
-                        if (is_array($should_query) && count($should_query) > 0) {
-                            $query[] = array(
-                                'bool' => array(
-                                    'should' => $should_query
+                foreach ($features as $term => $values) {
+                    if (count($values) > 1) {
+                        $query[] = array(
+                            'bool' => array(
+                                'should' => array(
+                                    'terms' => array(
+                                        $term => $values
+                                    )
                                 )
-                            );
-                        }
+                            )
+                        );
                     } else {
                         $query[] = array(
                             'bool' => array(
-                                'should' => $value
+                                'should' => array(
+                                    'term' => array(
+                                        $term => $values[0]
+                                    )
+                                )
                             )
                         );
                     }
-                } else {
-                    $query[] = array(
-                        'bool' => array(
-                            'should' => $value
-                        )
-                    );
                 }
             } elseif ($key == 'weight') {
                 $query[] = array(
