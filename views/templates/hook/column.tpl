@@ -13,7 +13,7 @@
 *}
 
 {if $nbr_filterBlocks != 0}
-    <div id="elasticsearch_block_left" class="block">
+    <div id="elasticsearch_block_left" class="elasticsearch">
         <div class="block_content">
             <a href="#" class="elasticsearch-mobile-toggle button-empty js-filter-mobile">
                 Filtres
@@ -222,7 +222,7 @@
         </div>
     </div>
 {else}
-    <div id="elasticsearch_block_left" class="block">
+    <div id="elasticsearch_block_left" class="elasticsearch elasticsearch--empty">
         <div class="block_content">
             <form action="#" id="elasticsearch_form">
                 <input type="hidden" name="id_elasticsearch_category" value="{$id_elasticsearch_category|intval}" />
