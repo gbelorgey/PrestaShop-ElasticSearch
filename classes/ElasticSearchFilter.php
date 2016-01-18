@@ -292,7 +292,8 @@ class ElasticSearchFilter extends AbstractFilter
             'price',
             'quantity',
             'id_combination_default',
-            'manufacturer_name'
+            'manufacturer_name',
+            'in_stock_when_global_oos_deny_orders'
         );
 
         $partial_fields = $this->getPartialFields($required_fields);
@@ -366,7 +367,8 @@ class ElasticSearchFilter extends AbstractFilter
                 'reduction_display' => $reduction_display,
                 'allow_oosp' => $allow_oosp,
                 'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id),
-                'manufacturer_name' => $this->extractProductField($product, 'manufacturer_name')
+                'manufacturer_name' => $this->extractProductField($product, 'manufacturer_name'),
+                'instock' => $this->extractProductField($product, 'in_stock_when_global_oos_deny_orders')
             );
         }
 
