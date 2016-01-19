@@ -874,21 +874,18 @@ class ElasticSearch extends Module
 
     public function hookDisplayTop()
     {
-        if (!Configuration::get('ELASTICSEARCH_SEARCH_DISPLAY'))
+        if (!Configuration::get('ELASTICSEARCH_SEARCH_DISPLAY')) {
             return '';
-
-        $search = $this->getSearchServiceObject();
-
-        if (!$search->testSearchServiceConnection())
-            return '';
+        }
 
         $this->context->controller->addCSS(_ELASTICSEARCH_CSS_URI_.$this->name.'.css');
 
-        if (Configuration::get('ELASTICSEARCH_SEARCH'))
+        if (Configuration::get('ELASTICSEARCH_SEARCH')) {
             $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.$this->name.'.js');
-
-        if (Configuration::get('ELASTICSEARCH_AJAX_SEARCH'))
+        }
+        if (Configuration::get('ELASTICSEARCH_AJAX_SEARCH')) {
             $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.'ajaxsearch.js');
+        }
 
         return $this->context->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'hook/top.tpl');
     }
