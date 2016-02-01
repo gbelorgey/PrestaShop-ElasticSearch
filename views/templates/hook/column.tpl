@@ -66,7 +66,7 @@
                             </div>
                             <div class="category__sub__links js-filter-content">
                                 {foreach from=$subcategories item=subcategory}
-                                    <a class="category__sub__link" href="{$link->getCategoryLink($subcategory.id_category, $subcategory.link_rewrite)|escape:'html':'UTF-8'}">
+                                    <a class="category__sub__link {if isset($is_last_tree_branch) && $is_last_tree_branch && $id_current_category == $subcategory.id_category}category__sub__link--current{/if}" href="{$link->getCategoryLink($subcategory.id_category, $subcategory.link_rewrite)|escape:'html':'UTF-8'}">
                                         {$subcategory.name|escape:'html':'UTF-8'}
                                     </a>
                                 {/foreach}

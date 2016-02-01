@@ -73,6 +73,10 @@ class AdminElasticSearchFilterController extends ModuleAdminController
                     'ELASTICSEARCH_SHOW_INSTOCK_FIRST' => array(
                         'type' => 'bool',
                         'title' => $this->l('Display out of stock products last')
+                    ),
+                    'ELASTICSEARCH_DISPLAY_CATEGORIES_SAME_LEVEL' => array(
+                        'type' => 'bool',
+                        'title' => $this->l('Show category tree of same level')
                     )
                 ),
                 'submit' => array('title' => $this->l('Save'))

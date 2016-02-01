@@ -125,8 +125,21 @@ abstract class AbstractFilter extends Brad\AbstractLogger
         $id_lang = Context::getContext()->language->id;
         if ($entity == 'category') {
             $category = new Category($id_entity, $id_lang);
+            $subcategories = $category->getSubCategories($id_lang);
+            if (Configuration::get('ELASTICSEARCH_DISPLAY_CATEGORIES_SAME_LEVEL')) {
+                $is_last_tree_branch = false;
+                if (count($subcategories) == 0) {
+                    $is_last_tree_branch = true;
+                    $subcategories = ElasticSearchFilter::getCategoriesSameLevel($category->id_parent, $id_lang);
+                }
+
+                Context::getContext()->smarty->assign(array(
+                   'is_last_tree_branch' => $is_last_tree_branch,
+                    'id_current_category' => $category->id
+                ));
+            }
             Context::getContext()->smarty->assign(array(
-                'subcategories' => $category->getSubCategories($id_lang)
+                'subcategories' => $subcategories
             ));
         }
         Context::getContext()->smarty->assign(array(
