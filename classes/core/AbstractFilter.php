@@ -111,6 +111,9 @@ abstract class AbstractFilter extends Brad\AbstractLogger
         $this->filters = $filters;
 
         $selected_filters = $this->getSelectedFilters();
+        if (!is_array($selected_filters)) {
+            $selected_filters = array();
+        }
 
         //@todo unset price and weight filters from $selected_filters if they are on default values
         // it might not be necessary though
