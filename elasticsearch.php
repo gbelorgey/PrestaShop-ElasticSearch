@@ -21,6 +21,7 @@ if (!defined('_PS_VERSION_'))
     exit;
 
 require_once('elasticsearch.config.php');
+require_once(_ELASTICSEARCH_CLASSES_DIR_.'ElasticMenuSearchTemplate.php');
 require_once(_ELASTICSEARCH_CLASSES_DIR_.'ElasticSearchTemplate.php');
 require_once(_ELASTICSEARCH_CORE_DIR_.'SearchService.php');
 
@@ -55,8 +56,7 @@ class ElasticSearch extends Module
     public function install()
     {
         if (!$this->installTab($this->l('Settings'), -1, self::SETTINGS_CLASSNAME) ||
-            !$this->installTab($this->l('Filter'), -1, self::FILTER_CLASSNAME))
-        {
+            !$this->installTab($this->l('Filter'), -1, self::FILTER_CLASSNAME)) {
             $this->_errors[] = $this->l('Could not install module tab');
             return false;
         }
@@ -213,21 +213,31 @@ class ElasticSearch extends Module
     {
         Module::$classInModule['AdminElasticSearchSettingscontroller'] = false;
         Module::$classInModule['AdminElasticSearchFiltercontroller'] = false;
+        Module::$classInModule['AdminElasticMenuSearchFiltercontroller'] = false;
 
         $this->submitActions();
         $this->displayNavigation();
 
-        switch (Tools::getValue('menu'))
-        {
+        switch (Tools::getValue('menu')) {
             case 'filter':
                 $this->displayFilterTemplatesList();
                 $this->displayFilterSettings();
+                break;
+            case 'menuFilter':
+                $this->displayMenuFilterTemplatesList();
+                $this->displayMenuFilterSettings();
                 break;
             case 'manage_filter_template':
                 $this->context->controller->addCSS(_ELASTICSEARCH_CSS_URI_.'template_management.css');
                 $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.'template_management.js');
                 $this->context->controller->addjqueryPlugin('sortable');
                 $this->displayFilterTemplateManagement();
+                break;
+            case 'manage_menu_filter_template':
+                $this->context->controller->addCSS(_ELASTICSEARCH_CSS_URI_.'template_management.css');
+                $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.'template_management.js');
+                $this->context->controller->addjqueryPlugin('sortable');
+                $this->displayMenuFilterTemplateManagement();
                 break;
             default:
                 $this->displayConfiguration();
@@ -261,31 +271,44 @@ class ElasticSearch extends Module
                 'href' => $this->module_url.'&menu=filter',
                 'active' => false,
                 'imgclass' => 'icon-filter'
+            ),
+            'menuFilter' => array(
+                'short' => 'MenuFilter',
+                'desc' => $this->l('Menu Products filter'),
+                'href' => $this->module_url.'&menu=menuFilter',
+                'active' => false,
+                'imgclass' => 'icon-filter'
             )
         );
 
         $available_pages = array_keys($menu_tabs);
         $current_page = Tools::getValue('menu', reset($available_pages));
 
-        if (in_array($current_page, array_keys($menu_tabs)))
+        if (in_array($current_page, array_keys($menu_tabs))) {
             $menu_tabs[$current_page]['active'] = true;
-
-        if (Tools::getValue('menu') == 'manage_filter_template')
+        }
+        if (Tools::getValue('menu') == 'manage_filter_template') {
             $menu_tabs['filter']['active'] = true;
-
+        }
+        if (Tools::getValue('menu') == 'manage_menu_filter_template') {
+            $menu_tabs['menuFilter']['active'] = true;
+        }
         return $menu_tabs;
     }
 
     private function submitActions()
     {
-        if (Tools::isSubmit('startIndexing'))
+        if (Tools::isSubmit('startIndexing')) {
             $this->indexProducts();
-        elseif (Tools::isSubmit('continueIndexing'))
+        } elseif (Tools::isSubmit('continueIndexing')) {
             $this->indexProducts(false);
-        elseif (Tools::isSubmit('submitAddelasticsearch_template'))
+        } elseif (Tools::isSubmit('submitAddelasticsearch_template')) {
             $this->saveFilterTemplate();
-        elseif (Tools::isSubmit('deleteFilterTemplate'))
+        } elseif (Tools::isSubmit('submitAddelasticsearch_menu_template')) {
+            $this->saveMenuFilterTemplate();
+        } elseif (Tools::isSubmit('deleteFilterTemplate')) {
             $this->deleteFilterTemplate();
+        }
     }
 
     private function deleteFilterTemplate()
@@ -304,17 +327,30 @@ class ElasticSearch extends Module
         else
             $this->html .= $this->displayError($this->l('Filter template not found'));
     }
+    
+    private function deleteMenuFilterTemplate()
+    {
+        $id_elasticsearch_menu_template = (int)Tools::getValue('id_elasticsearch_menu_template');
+
+        $elasticsearch_template = new ElasticSearchTemplate((int)$id_elasticsearch_menu_template);
+
+        if (Validate::isLoadedObject($elasticsearch_template)) {
+            $elasticsearch_template->delete();
+            $this->buildMenuLayeredCategories();
+            $this->html .= $this->displayConfirmation($this->l('Menu Filter template deleted, categories updated (reverted to default Filter template)'));
+        } else {
+            $this->html .= $this->displayError($this->l('Menu Filter template not found'));
+        }
+    }
 
     private function saveFilterTemplate()
     {
-        if (!Tools::getValue('elasticsearch_tpl_name'))
+        if (!Tools::getValue('elasticsearch_tpl_name')) {
             $this->html .= $this->displayError($this->l('Filter template name required (cannot be empty)'));
-        elseif (!Tools::getValue('categoryBox'))
+        } elseif (!Tools::getValue('categoryBox')) {
             $this->html .= $this->displayError($this->l('You must select at least one category.'));
-        else
-        {
-            if (Tools::getValue('id_elasticsearch_template'))
-            {
+        } else {
+            if (Tools::getValue('id_elasticsearch_template')) {
                 Db::getInstance()->execute('
                     DELETE FROM `'._DB_PREFIX_.'elasticsearch_template`
                     WHERE `id_elasticsearch_template` = "'.(int)Tools::getValue('id_elasticsearch_template').'"
@@ -323,75 +359,71 @@ class ElasticSearch extends Module
                 $this->buildLayeredCategories();
             }
 
-            if (Tools::getValue('scope') == 1)
-            {
+            if (Tools::getValue('scope') == 1) {
                 Db::getInstance()->execute('TRUNCATE TABLE '._DB_PREFIX_.'elasticsearch_template');
                 $categories = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
                     SELECT id_category
-                    FROM '._DB_PREFIX_.'category'
-                );
+                    FROM '._DB_PREFIX_.'category
+                ');
 
-                foreach ($categories as $category)
+                foreach ($categories as $category) {
                     $_POST['categoryBox'][] = (int)$category['id_category'];
+                }
             }
 
             $id_elasticsearch_template = (int)Tools::getValue('id_elasticsearch_template');
 
-            if (!$id_elasticsearch_template)
+            if (!$id_elasticsearch_template) {
                 $id_elasticsearch_template = (int)Db::getInstance()->Insert_ID();
-
+            }
             $shop_list = array();
-
             $assos = array();
 
-            if ($selected_shops = Tools::getValue('checkBoxShopAsso_elasticsearch_template'))
-            {
-                foreach (array_keys($selected_shops) as $id_shop)
-                {
+            if ($selected_shops = Tools::getValue('checkBoxShopAsso_elasticsearch_template')) {
+                foreach (array_keys($selected_shops) as $id_shop) {
                     $assos[] = array('id_object' => (int)$id_elasticsearch_template, 'id_shop' => (int)$id_shop);
                     $shop_list[] = (int)$id_shop;
                 }
-            }
-            else
+            } else {
                 $shop_list = array(Context::getContext()->shop->id);
+            }
 
             Db::getInstance()->execute('
                 DELETE FROM '._DB_PREFIX_.'elasticsearch_template_shop
-                WHERE `id_elasticsearch_template` = '.(int)$id_elasticsearch_template
-            );
+                WHERE `id_elasticsearch_template` = '.(int)$id_elasticsearch_template);
 
-            if (count(Tools::getValue('categoryBox')))
-            {
+            if (count(Tools::getValue('categoryBox'))) {
                 /* Clean categoryBox before use */
-                if (is_array(Tools::getValue('categoryBox')))
-                    foreach (Tools::getValue('categoryBox') as &$category_box_tmp)
+                if (is_array(Tools::getValue('categoryBox'))) {
+                    foreach (Tools::getValue('categoryBox') as &$category_box_tmp) {
                         $category_box_tmp = (int)$category_box_tmp;
+                    }
+                }
 
                 $filter_values = array();
 
-                foreach (Tools::getValue('categoryBox') as $idc)
+                foreach (Tools::getValue('categoryBox') as $idc) {
                     $filter_values['categories'][] = (int)$idc;
-
+                }
                 $filter_values['shop_list'] = $shop_list;
 
-                foreach (Tools::getValue('categoryBox') as $id_category_elasticsearch)
-                {
-                    foreach ($_POST as $key => $value)
-                        if (Tools::substr($key, 0, 23) == 'elasticsearch_selection' && $value == 'on')
-                        {
+                foreach (Tools::getValue('categoryBox') as $id_category_elasticsearch) {
+                    foreach ($_POST as $key => $value) {
+                        if (Tools::substr($key, 0, 23) == 'elasticsearch_selection' && $value == 'on') {
                             $type = 0;
                             $limit = 0;
-
-                            if (Tools::getValue($key.'_filter_type'))
+                            if (Tools::getValue($key.'_filter_type')) {
                                 $type = Tools::getValue($key.'_filter_type');
-                            if (Tools::getValue($key.'_filter_show_limit'))
+                            }
+                            if (Tools::getValue($key.'_filter_show_limit')) {
                                 $limit = Tools::getValue($key.'_filter_show_limit');
-
+                            }
                             $filter_values[$key] = array(
                                 'filter_type' => (int)$type,
                                 'filter_show_limit' => (int)$limit
                             );
                         }
+                    }
                 }
 
                 $values_to_insert = array(
@@ -400,22 +432,141 @@ class ElasticSearch extends Module
                     'n_categories' => (int)count($filter_values['categories']),
                     'date_add' => date('Y-m-d H:i:s'));
 
-                if (Tools::getValue('id_elasticsearch_template'))
+                if (Tools::getValue('id_elasticsearch_template')) {
                     $values_to_insert['id_elasticsearch_template'] = (int)Tools::getValue('id_elasticsearch_template');
+                }
 
                 Db::getInstance()->autoExecute(_DB_PREFIX_.'elasticsearch_template', $values_to_insert, 'INSERT');
                 $id_elasticsearch_template = (int)Db::getInstance()->Insert_ID();
 
-                if (!empty($assos))
-                    foreach ($assos as $asso)
+                if (!empty($assos)) {
+                    foreach ($assos as $asso) {
                         Db::getInstance()->execute('
                             INSERT INTO '._DB_PREFIX_.'elasticsearch_template_shop
                                 (`id_elasticsearch_template`, `id_shop`)
                             VALUES
-                                ('.$id_elasticsearch_template.', '.(int)$asso['id_shop'].')'
-                        );
-
+                                ('.$id_elasticsearch_template.', '.(int)$asso['id_shop'].')
+                        ');
+                    }
+                }
                 $this->buildLayeredCategories();
+                $this->html .= $this->displayConfirmation($this->l('Your filter template saved successfully'));
+            }
+        }
+    }
+    
+    private function saveMenuFilterTemplate()
+    {
+        if (!Tools::getValue('elasticsearch_tpl_name')) {
+            $this->html .= $this->displayError($this->l('Filter template name required (cannot be empty)'));
+        } elseif (!Tools::getValue('categoryBox')) {
+            $this->html .= $this->displayError($this->l('You must select at least one category.'));
+        } else {
+            if (Tools::getValue('id_elasticsearch_menu_template')) {
+                Db::getInstance()->execute('
+                    DELETE FROM `'._DB_PREFIX_.'elasticsearch_menu_template`
+                    WHERE `id_elasticsearch_menu_template` = "'.(int)Tools::getValue('id_elasticsearch_menu_template').'"
+                ');
+
+                $this->buildMenuLayeredCategories();
+            }
+
+            if (Tools::getValue('scope') == 1) {
+                Db::getInstance()->execute('TRUNCATE TABLE '._DB_PREFIX_.'elasticsearch_menu_template');
+                $categories = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+                    SELECT id_category
+                    FROM '._DB_PREFIX_.'category
+                ');
+
+                foreach ($categories as $category) {
+                    $_POST['categoryBox'][] = (int)$category['id_category'];
+                }
+            }
+
+            $id_elasticsearch_menu_template = (int)Tools::getValue('id_elasticsearch_menu_template');
+
+            if (!$id_elasticsearch_menu_template) {
+                $id_elasticsearch_menu_template = (int)Db::getInstance()->Insert_ID();
+            }
+            $shop_list = array();
+            $assos = array();
+
+            if ($selected_shops = Tools::getValue('checkBoxShopAsso_elasticsearch_template')) {
+                foreach (array_keys($selected_shops) as $id_shop) {
+                    $assos[] = array('id_object' => (int)$id_elasticsearch_menu_template, 'id_shop' => (int)$id_shop);
+                    $shop_list[] = (int)$id_shop;
+                }
+            } else {
+                $shop_list = array(Context::getContext()->shop->id);
+            }
+
+            Db::getInstance()->execute('
+                DELETE FROM '._DB_PREFIX_.'elasticsearch_menu_template_shop
+                WHERE `id_elasticsearch_menu_template` = '.(int)$id_elasticsearch_menu_template);
+
+            if (count(Tools::getValue('categoryBox'))) {
+                /* Clean categoryBox before use */
+                if (is_array(Tools::getValue('categoryBox'))) {
+                    foreach (Tools::getValue('categoryBox') as &$category_box_tmp) {
+                        $category_box_tmp = (int)$category_box_tmp;
+                    }
+                }
+
+                $filter_values = array();
+
+                foreach (Tools::getValue('categoryBox') as $idc) {
+                    $filter_values['categories'][] = (int)$idc;
+                }
+                $filter_values['shop_list'] = $shop_list;
+
+                foreach (Tools::getValue('categoryBox') as $id_category_elasticsearch) {
+                    foreach ($_POST as $key => $value) {
+                        if (Tools::substr($key, 0, 23) == 'elasticsearch_selection' && $value == 'on') {
+                            $type = 0;
+                            $limit = 0;
+                            $push_foward = 0;
+                            if (Tools::getValue($key.'_filter_type')) {
+                                $type = Tools::getValue($key.'_filter_type');
+                            }
+                            if (Tools::getValue($key.'_filter_show_limit')) {
+                                $limit = Tools::getValue($key.'_filter_show_limit');
+                            }
+                            if (Tools::getValue($key.'_push_foward') == 'on') {
+                                $push_foward = 1;
+                            }
+                            $filter_values[$key] = array(
+                                'filter_type' => (int)$type,
+                                'filter_show_limit' => (int)$limit,
+                                'push_foward' => $push_foward
+                            );
+                        }
+                    }
+                }
+
+                $values_to_insert = array(
+                    'name' => pSQL(Tools::getValue('elasticsearch_tpl_name')),
+                    'filters' => pSQL(serialize($filter_values)),
+                    'n_categories' => (int)count($filter_values['categories']),
+                    'date_add' => date('Y-m-d H:i:s'));
+
+                if (Tools::getValue('id_elasticsearch_menu_template')) {
+                    $values_to_insert['id_elasticsearch_menu_template'] = (int)Tools::getValue('id_elasticsearch_menu_template');
+                }
+
+                Db::getInstance()->autoExecute(_DB_PREFIX_.'elasticsearch_menu_template', $values_to_insert, 'INSERT');
+                $id_elasticsearch_menu_template = (int)Db::getInstance()->Insert_ID();
+
+                if (!empty($assos)) {
+                    foreach ($assos as $asso) {
+                        Db::getInstance()->execute('
+                            INSERT INTO '._DB_PREFIX_.'elasticsearch_menu_template_shop
+                                (`id_elasticsearch_menu_template`, `id_shop`)
+                            VALUES
+                                ('.$id_elasticsearch_menu_template.', '.(int)$asso['id_shop'].')
+                        ');
+                    }
+                }
+                $this->buildMenuLayeredCategories();
                 $this->html .= $this->displayConfirmation($this->l('Your filter template saved successfully'));
             }
         }
@@ -432,75 +583,159 @@ class ElasticSearch extends Module
         $categories = array();
         Db::getInstance()->execute('TRUNCATE '._DB_PREFIX_.'elasticsearch_category');
 
-        if (!count($res))
+        if (!count($res)) {
             return true;
-
+        }
         $values = false;
         $sql_to_insert = '
             INSERT INTO '._DB_PREFIX_.'elasticsearch_category
-                (`id_category`, `id_shop`, `id_value`, `type`, `position`, `filter_show_limit`, `filter_type`, `date_add`)
+                (`id_category`, `id_shop`, `id_value`, `type`, `position`, `filter_show_limit`, `filter_type`,`date_add`)
             VALUES ';
 
-        foreach ($res as $filter_template)
-        {
+        foreach ($res as $filter_template) {
             $data = Tools::unSerialize($filter_template['filters']);
-
-            foreach ($data['shop_list'] as $id_shop)
-            {
-                if (!isset($categories[$id_shop]))
+            
+            foreach ($data['shop_list'] as $id_shop) {
+                if (!isset($categories[$id_shop])) {
                     $categories[$id_shop] = array();
+                }
 
-                foreach ($data['categories'] as $id_category)
-                {
+                foreach ($data['categories'] as $id_category) {
                     $n = 0;
 
-                    if (!in_array($id_category, $categories[$id_shop]))
-                    {
+                    if (!in_array($id_category, $categories[$id_shop])) {
                         $categories[$id_shop][] = $id_category;
 
-                        foreach ($data as $key => $value)
-                            if (Tools::substr($key, 0, 24) == 'elasticsearch_selection_')
-                            {
+                        foreach ($data as $key => $value) {
+                            if (Tools::substr($key, 0, 24) == 'elasticsearch_selection_') {
                                 $values = true;
-                                $type = $value['filter_type'];
+                                $type = null;                              
+                                if (isset($value['filter_type'])) {
+                                    $type = $value['filter_type'];
+                                }
                                 $limit = $value['filter_show_limit'];
                                 $n++;
 
-                                if ($key == 'elasticsearch_selection_stock')
+                                if ($key == 'elasticsearch_selection_stock') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "quantity", '.(int)$n.', '.(int)$limit.', '.
                                         (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if ($key == 'elasticsearch_selection_subcategories')
+                                } elseif ($key == 'elasticsearch_selection_subcategories') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "category", '.(int)$n.', '.(int)$limit.', '.
                                         (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if ($key == 'elasticsearch_selection_condition')
+                                } elseif ($key == 'elasticsearch_selection_condition') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "condition", '.(int)$n.', '.(int)$limit.', '.
                                         (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if ($key == 'elasticsearch_selection_weight_slider')
+                                } elseif ($key == 'elasticsearch_selection_weight_slider') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "weight", '.(int)$n.', '.(int)$limit.', '.
-                                        (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if ($key == 'elasticsearch_selection_price_slider')
+                                        (int)$type.',  "'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_price_slider') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "price", '.(int)$n.', '.(int)$limit.', '.
                                         (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if ($key == 'elasticsearch_selection_manufacturer')
+                                } elseif ($key == 'elasticsearch_selection_manufacturer') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "manufacturer", '.(int)$n.', '.(int)$limit.', '.
                                         (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_')
+                                } elseif (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_ag_', '', $key).
-                                        ', "id_attribute_group", '.(int)$n.', '.(int)$limit.', '.(int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                else if (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_')
+                                        ', "id_attribute_group", '.(int)$n.', '.(int)$limit.', '.(int)$type.',  "'.date('Y-m-d H:i:s').'"),';
+                                } elseif (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_feat_', '', $key).
                                         ', "id_feature", '.(int)$n.', '.(int)$limit.', '.(int)$type.', "'.date('Y-m-d H:i:s').'"),';
+                                }
                             }
+                        }
                     }
                 }
             }
         }
 
-        if ($values)
+        if ($values) {
             DB::getInstance()->execute(rtrim($sql_to_insert, ','));
-
+        }
         return null;
     }
+    
+    public function buildMenuLayeredCategories()
+    {
+        $res = Db::getInstance()->executeS('
+            SELECT *
+            FROM '._DB_PREFIX_.'elasticsearch_menu_template
+            ORDER BY `date_add` DESC
+        ');
+
+        $categories = array();
+        Db::getInstance()->execute('TRUNCATE '._DB_PREFIX_.'elasticsearch_menu_category');
+
+        if (!count($res)) {
+            return true;
+        }
+        $values = false;
+        $sql_to_insert = '
+            INSERT INTO '._DB_PREFIX_.'elasticsearch_menu_category
+                (`id_category`, `id_shop`, `id_value`, `type`, `position`, `filter_show_limit`, `push_foward`,`date_add`)
+            VALUES ';
+
+        foreach ($res as $filter_template) {
+            $data = Tools::unSerialize($filter_template['filters']);
+            
+            foreach ($data['shop_list'] as $id_shop) {
+                if (!isset($categories[$id_shop])) {
+                    $categories[$id_shop] = array();
+                }
+
+                foreach ($data['categories'] as $id_category) {
+                    $n = 0;
+
+                    if (!in_array($id_category, $categories[$id_shop])) {
+                        $categories[$id_shop][] = $id_category;
+
+                        foreach ($data as $key => $value) {
+                            if (Tools::substr($key, 0, 24) == 'elasticsearch_selection_') {
+                                $values = true;
+                                $push_foward = 0;
+                                if (isset($value['push_foward'])) {
+                                    $push_foward = (int)$value['push_foward'];
+                                }
+                                $limit = $value['filter_show_limit'];
+                                $n++;
+
+                                if ($key == 'elasticsearch_selection_stock') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "quantity", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.',"'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_subcategories') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "category", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_condition') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "condition", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_weight_slider') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "weight", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_price_slider') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "price", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif ($key == 'elasticsearch_selection_manufacturer') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "manufacturer", '.(int)$n.', '.(int)$limit.', '.
+                                        $push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_ag_', '', $key).
+                                        ', "id_attribute_group", '.(int)$n.', '.(int)$limit.', '.$push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                } elseif (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_') {
+                                    $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_feat_', '', $key).
+                                        ', "id_feature", '.(int)$n.', '.(int)$limit.', '.$push_foward.', "'.date('Y-m-d H:i:s').'"),';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($values) {
+            DB::getInstance()->execute(rtrim($sql_to_insert, ','));
+        }
+        return null;
+    }
+
 
     private function indexProducts($delete_old = true)
     {
@@ -539,7 +774,19 @@ class ElasticSearch extends Module
         $controller->initForm();
         $this->html .= $controller->renderForm();
     }
+    
+    private function displayMenuFilterTemplateManagement()
+    {
+        $this->addTreeJs();
 
+        require_once(_ELASTICSEARCH_CONTROLLERS_DIR_.'admin/AdminElasticMenuSearchFilterController.php');
+
+        $controller = new AdminElasticMenuSearchFilterController();
+        $this->displayConnectionError();
+        $controller->initForm();
+        $this->html .= $controller->renderForm();
+    }
+    
     private function displayFilterTemplatesList()
     {
         $this->context->smarty->assign(array(
@@ -549,7 +796,17 @@ class ElasticSearch extends Module
 
         $this->html .= $this->context->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'admin/filters_list.tpl');
     }
+    
+    private function displayMenuFilterTemplatesList()
+    {
+        $this->context->smarty->assign(array(
+            'current_url' => $this->module_url,
+            'filters_templates' => ElasticMenuSearchTemplate::getList(),
+        ));
 
+        $this->html .= $this->context->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'admin/menu_filters_list.tpl');
+    }
+    
     private function displayFilterSettings()
     {
         require_once(_ELASTICSEARCH_CONTROLLERS_DIR_.'admin/AdminElasticSearchFilterController.php');
@@ -557,20 +814,38 @@ class ElasticSearch extends Module
         $controller = new AdminElasticSearchFilterController();
         $controller->initOptionFields();
 
-        if (Tools::isSubmit('submitOptionselasticsearch_template'))
-        {
+        if (Tools::isSubmit('submitOptionselasticsearch_template')) {
             $controller->updateOptions();
-
-            if (!empty($controller->errors))
+            if (!empty($controller->errors)) {
                 $this->html .= $this->displayError(implode('<br />', $controller->errors));
-            else
+            } else {
                 $this->html .= $this->displayConfirmation($this->l('Filter settings saved successfully'));
+            }
         }
-
         $this->displayConnectionError();
-
         $controller->table = 'elasticsearch_template';
         $controller->class = 'ElasticSearchTemplate';
+        $this->html .= $controller->renderOptions();
+    }
+    
+    private function displayMenuFilterSettings()
+    {
+        require_once(_ELASTICSEARCH_CONTROLLERS_DIR_.'admin/AdminElasticMenuSearchFilterController.php');
+
+        $controller = new AdminElasticMenuSearchFilterController();
+        $controller->initOptionFields();
+
+        if (Tools::isSubmit('submitOptionselasticsearch_menu_template')) {
+            $controller->updateOptions();
+            if (!empty($controller->errors)) {
+                $this->html .= $this->displayError(implode('<br />', $controller->errors));
+            } else {
+                $this->html .= $this->displayConfirmation($this->l('Filter settings saved successfully'));
+            }
+        }
+        $this->displayConnectionError();
+        $controller->table = 'elasticsearch_menu_template';
+        $controller->class = 'ElasticMenuSearchTemplate';
         $this->html .= $controller->renderOptions();
     }
 
