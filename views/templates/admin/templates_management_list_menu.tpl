@@ -249,7 +249,7 @@
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
                                             <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_price_slide_push_foward" id="elasticsearch_selection_price_slider_push_foward" type="checkbox" />
+						<input name="elasticsearch_selection_price_slider_push_foward" id="elasticsearch_selection_price_slider_push_foward" type="checkbox" />
 						<span>
 							<span>{l s='Yes' mod='elasticsearch'}</span>
 							<span>{l s='No' mod='elasticsearch'}</span>
