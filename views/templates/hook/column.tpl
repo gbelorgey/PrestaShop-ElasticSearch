@@ -62,7 +62,7 @@
                         <div class="category__sub">
                             <div class="category__sub__title js-filter-toggle">
                                 {l s='Produits'}
-                                <span class="picto picto--chevron_right"></span>
+                                <span class="picto picto--chevron-right"></span>
                             </div>
                             <div class="category__sub__links js-filter-content">
                                 {foreach from=$subcategories item=subcategory}
@@ -90,7 +90,7 @@
                             <div class="elasticsearch_subtitle_heading{if $selected_values} elasticsearch_subtitle_heading--selected{/if} js-filter-toggle">
                                 <span class="elasticsearch_subtitle">
                                     {$filter.name|escape:'html':'UTF-8'}
-                                    <span class="picto picto--chevron_right"></span>
+                                    <span class="picto picto--chevron-right"></span>
                                 </span>
                             </div>
                             <ul id="ul_elasticsearch_{$filter.type}_{$filter.id_key}" class="elasticsearch_filter_ul{if isset($filter.is_color_group) && $filter.is_color_group} color-group{/if} js-filter-content">
