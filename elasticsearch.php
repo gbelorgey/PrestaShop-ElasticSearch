@@ -1038,6 +1038,18 @@ class ElasticSearch extends Module
         );
     }
 
+    public function getCategoriesCount($id_shop)
+    {
+        return (int)Db::getInstance()->getValue('
+            SELECT count(cs.`id_category`)
+            FROM `'._DB_PREFIX_.'category_shop` cs
+            INNER JOIN `'._DB_PREFIX_.'category` c
+                ON cs.`id_category` = c.`id_category`
+            WHERE c.`active` = 1
+                AND cs.`id_shop` = "'.(int)$id_shop.'"'
+        );
+    }
+
     public function processAjaxSearch()
     {
         require_once(_ELASTICSEARCH_CONTROLLERS_DIR_.'front/elasticsearch.php');
