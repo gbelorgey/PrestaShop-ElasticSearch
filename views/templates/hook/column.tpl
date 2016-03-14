@@ -151,7 +151,6 @@
                                     {/if}
                                 {else}
                                     {if $filter.filter_type == 0}
-                                    <pre>{$filter|var_export:true}</pre>
                                         <span id="elasticsearch_{$filter.type|escape:'htmlall':'UTF-8'}_range" class="elasticsearch_slider_range"></span>
                                         <div class="elasticsearch_slider_container">
                                             <div class="elasticsearch_slider" id="elasticsearch_{$filter.type|escape:'htmlall':'UTF-8'}_slider" data-type="{$filter.type|escape:'htmlall':'UTF-8'}" data-format="{$filter.format|escape:'htmlall':'UTF-8'}" data-unit="{$filter.unit|escape:'htmlall':'UTF-8'}"></div>
