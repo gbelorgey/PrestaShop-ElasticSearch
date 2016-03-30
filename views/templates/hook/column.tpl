@@ -15,12 +15,15 @@
 {if $nbr_filterBlocks != 0}
     <div id="elasticsearch_block_left" class="elasticsearch">
         <div class="block_content">
-            <a href="#" class="elasticsearch-mobile-toggle button-empty js-filter-mobile">
-                Filtres
-            </a>
-            <form action="#" id="elasticsearch_form">
+            <div class="elasticsearch__menu js-elasticsearch-menu">
+                <a href="#" class="elasticsearch__toggle js-elastisearch-toggle">
+                    {l s='Filtrer'}
+                    <span class="picto picto--chevron-right"></span>
+                </a>
+            </div>
+            <form action="#" id="elasticsearch_form" class="elasticsearch__form js-elastisearch-form">
                 <div>
-                    <div id="enabled_filters">
+                    <div class="elasticsearch__enabled" id="enabled_filters">
                         {if isset($selected_filters) && $n_filters > 0}
                             <span class="elasticsearch_subtitle" style="float: none;">
                                 {l s='Enabled filters:' mod='elasticsearch'}
@@ -59,10 +62,12 @@
                         {/if}
                     </div>
                     {if isset($subcategories) && count($subcategories) > 0}
-                        <div class="category__sub">
-                            <div class="category__sub__title js-filter-toggle">
-                                {l s='Produits'}
-                                <span class="picto picto--chevron-right"></span>
+                        <div class="elasticsearch__block">
+                            <div class="elasticsearch__block__title js-filter-toggle">
+                                <span class="elasticsearch__block__title__inner">
+                                    {l s='Produits'}
+                                    <span class="picto picto--chevron-right"></span>
+                                </span>
                             </div>
                             <div class="category__sub__links js-filter-content">
                                 {foreach from=$subcategories item=subcategory}
@@ -75,11 +80,11 @@
                     {/if}
                     {foreach from=$filters item=filter}
                     {if isset($filter.values) && count($filter.values) > 0}
-                    {if isset($filter.slider)}
-                    <div class="elasticsearch_{$filter.type|escape:'htmlall':'UTF-8'}" style="display: none;">
+                        {if isset($filter.slider)}
+                            <div class="elasticsearch__block elasticsearch_{$filter.type|escape:'htmlall':'UTF-8'}" style="display: none;">
                         {else}
-                        <div class="elasticsearch_filter">
-                            {/if}
+                            <div class="elasticsearch__block elasticsearch_filter">
+                        {/if}
                             {assign var="selected_values" value=false}
                             {foreach from=$filter.values key=id_value item=value name=fe}
                                 {if isset($value.nbr) && $value.nbr && isset($value.checked) && $value.checked}
@@ -87,8 +92,8 @@
                                     {break}
                                 {/if}
                             {/foreach}
-                            <div class="elasticsearch_subtitle_heading{if $selected_values} elasticsearch_subtitle_heading--selected{/if} js-filter-toggle">
-                                <span class="elasticsearch_subtitle">
+                            <div class="elasticsearch__block__title{if $selected_values} elasticsearch__block__title--selected{/if} js-filter-toggle">
+                                <span class="elasticsearch__block__title__inner">
                                     {$filter.name|escape:'html':'UTF-8'}
                                     <span class="picto picto--chevron-right"></span>
                                 </span>
@@ -105,11 +110,18 @@
                                                     {else}
                                                         <input type="checkbox" class="checkbox" name="elasticsearch_{$filter.type_lite}_{$id_value}" id="elasticsearch_{$filter.type_lite}{if $id_value || $filter.type == 'quantity'}_{$id_value}{/if}" value="{$id_value}{if $filter.id_key}_{$filter.id_key}{/if}"{if isset($value.checked) && $value.checked} checked="checked"{/if}{if !$value.nbr} disabled="disabled"{/if} />
                                                     {/if}
-                                                    <label for="elasticsearch_{$filter.type_lite}_{$id_value}"{if !$value.nbr} class="disabled"{else}{if isset($filter.is_color_group) && $filter.is_color_group} name="elasticsearch_{$filter.type_lite}_{$id_value}" class="elasticsearch_color" data-rel="{$id_value}_{$filter.id_key}"{/if}{/if}>
+                                                    <label for="elasticsearch_{$filter.type_lite}_{$id_value}" class="elasticsearch__option__value{if !$value.nbr} disabled{elseif isset($filter.is_color_group) && $filter.is_color_group} elasticsearch_color{/if}" {if isset($filter.is_color_group) && $filter.is_color_group && $value.nbr} name="elasticsearch_{$filter.type_lite}_{$id_value}" data-rel="{$id_value}_{$filter.id_key}"{/if}>
                                                         {if !$value.nbr}
                                                             {$value.name|escape:'html':'UTF-8'}{if $elasticsearch_show_qties}<span> ({$value.nbr})</span>{/if}
                                                         {else}
-                                                            <a href="javascript:void(0);">{$value.name|escape:'html':'UTF-8'}{if $elasticsearch_show_qties}<span> ({$value.nbr})</span>{/if}</a>
+                                                            <a href="javascript:void(0);" class="elasticsearch__option__value__inner">
+                                                                {$value.name|escape:'html':'UTF-8'}
+                                                                {if $elasticsearch_show_qties}
+                                                                    <span>
+                                                                        ({$value.nbr})
+                                                                    </span>
+                                                                {/if}
+                                                            </a>
                                                         {/if}
                                                     </label>
                                                 </li>
