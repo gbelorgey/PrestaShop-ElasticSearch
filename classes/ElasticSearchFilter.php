@@ -241,6 +241,11 @@ class ElasticSearchFilter extends AbstractFilter
 
         $pagination = (int)Tools::getValue('n');
         $start = ($page - 1) * $pagination;
+
+        if (empty($pagination)) {
+            $pagination = $this->getProductsBySelectedFilters($selected_filters, true);
+        }
+        
         $order_by_values = array(0 => 'name', 1 => 'price', 6 => 'quantity', 7 => 'reference');
         $order_way_values = array(0 => 'asc', 1 => 'desc');
 
@@ -314,6 +319,7 @@ class ElasticSearchFilter extends AbstractFilter
 
         $global_allow_oosp = (int)Configuration::get('PS_ORDER_OUT_OF_STOCK');
 
+
         foreach ($products as $product) {
             $allow_oosp = $this->extractProductField($product, 'out_of_stock');
             $allow_oosp =
@@ -371,7 +377,6 @@ class ElasticSearchFilter extends AbstractFilter
                 'instock' => $this->extractProductField($product, 'in_stock_when_global_oos_deny_orders')
             );
         }
-
         return $products_data;
     }
 
