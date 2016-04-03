@@ -55,6 +55,14 @@ class ElasticSearchFilter extends AbstractFilter
                         'filter' => $price_query
                     );
                     break;
+                case self::FILTER_TYPE_DISCOUNT:
+                    $required_filters[] = array(
+                        'aggregation_type' => 'terms',
+                        'field' => 'discount_'.$id_currency,
+                        'alias' => 'discount_'.$id_currency,
+                        'filter' => $this->getProductsQueryByFilters($selected_filters, $type)
+                    );
+                    break;
                 case self::FILTER_TYPE_WEIGHT:
                     if (!isset($weight_query)) {
                         $weight_query = $this->getProductsQueryByFilters($selected_filters, $type);
@@ -512,6 +520,14 @@ class ElasticSearchFilter extends AbstractFilter
 
                         $price_counter++;
                         break;
+
+                    case 'discount':
+                        $search_values['discount'][] = array(
+                            'term' => array(
+                                'discount' => $value
+                            )
+                        );
+                        break;
                 }
             }
         }
@@ -699,6 +715,20 @@ class ElasticSearchFilter extends AbstractFilter
                         )
                     )
                 );
+            } elseif ($key == 'discount') {
+                $tmp = array();
+                foreach ($value as $v) {
+                    $tmp[] = array(
+                        'term' => array(
+                            'discount_'.(int)Context::getContext()->currency->id => $v['term']['discount']
+                        )
+                    );
+                }
+                $query[] = array(
+                    'bool' => array(
+                        'should' => $tmp
+                    )
+                );
             }
         }
 
@@ -751,7 +781,8 @@ class ElasticSearchFilter extends AbstractFilter
                 'category' => array(),
                 'manufacturer' => array(),
                 'quantity' => array(),
-                'condition' => array()
+                'condition' => array(),
+                'discount' => array()
             );
 
             foreach ($_GET as $key => $value) {
@@ -771,35 +802,41 @@ class ElasticSearchFilter extends AbstractFilter
                             $id_key = $tmp_tab[1];
                         }
 
-                        if ($res[1] == 'condition' && in_array($value, array('new', 'used', 'refurbished'))) {
-                            $selected_filters['condition'][] = $value;
-                        } else {
-                            if ($res[1] == 'quantity' && (!$value || $value == 1)) {
-                                $selected_filters['quantity'][] = $value;
-                            } else {
-                                if (in_array($res[1], array('category', 'manufacturer'))) {
-                                    if (!isset($selected_filters[$res[1].($id_key ? '_'.$id_key : '')])) {
-                                        $selected_filters[$res[1].($id_key ? '_'.$id_key : '')] = array();
-                                    }
-
-                                    $selected_filters[$res[1].($id_key ? '_'.$id_key : '')][] = (int)$value;
-                                } else {
-                                    if (in_array($res[1], array('id_attribute_group', 'id_feature'))) {
-                                        if (!isset($selected_filters[$res[1]])) {
-                                            $selected_filters[$res[1]] = array();
-                                        }
-                                        $selected_filters[$res[1]][(int)$value] = $id_key.'_'.(int)$value;
-                                    } else {
-                                        if ($res[1] == 'weight') {
-                                            $selected_filters[$res[1]] = $tmp_tab;
-                                        } else {
-                                            if ($res[1] == 'price') {
-                                                $selected_filters[$res[1]] = $tmp_tab;
-                                            }
-                                        }
-                                    }
+                        switch ($res[1]) {
+                            case self::FILTER_TYPE_DISCOUNT:
+                                $selected_filters['discount'][] = $value;
+                                break;
+                            case self::FILTER_TYPE_CONDITION:
+                                if (in_array($value, array('new', 'used', 'refurbished'))) {
+                                    $selected_filters['condition'][] = $value;
                                 }
-                            }
+                                break;
+                            case self::FILTER_TYPE_QUANTITY:
+                                if (!$value || $value == 1) {
+                                    $selected_filters['quantity'][] = $value;
+                                }
+                                break;
+                            case self::FILTER_TYPE_CATEGORY:
+                            case self::FILTER_TYPE_MANUFACTURER:
+                                if (!isset($selected_filters[$res[1].($id_key ? '_'.$id_key : '')])) {
+                                    $selected_filters[$res[1].($id_key ? '_'.$id_key : '')] = array();
+                                }
+
+                                $selected_filters[$res[1].($id_key ? '_'.$id_key : '')][] = (int)$value;
+                                break;
+                            case self::FILTER_TYPE_ATTRIBUTE_GROUP:
+                            case self::FILTER_TYPE_FEATURE:
+                                if (!isset($selected_filters[$res[1]])) {
+                                    $selected_filters[$res[1]] = array();
+                                }
+                                $selected_filters[$res[1]][(int)$value] = $id_key.'_'.(int)$value;
+                                break;
+                            case self::FILTER_TYPE_WEIGHT:
+                                $selected_filters[$res[1]] = $tmp_tab;
+                                break;
+                            case self::FILTER_TYPE_PRICE:
+                                $selected_filters[$res[1]] = $tmp_tab;
+                                break;
                         }
                     }
                 }
@@ -899,6 +936,52 @@ class ElasticSearchFilter extends AbstractFilter
         }
 
         return null;
+    }
+
+    /**
+     * @param array $filter
+     * @return array discount filter data to be used in template
+     */
+    protected function getDiscountFilter($filter)
+    {
+        if (isset($filter[0])) {
+            $filter = $filter[0];
+        }
+
+        $currency = Context::getContext()->currency;
+
+        $discount_filter = array(
+            'type_lite' => self::FILTER_TYPE_DISCOUNT,
+            'type' => self::FILTER_TYPE_DISCOUNT,
+            'id_key' => 0,
+            'name' => $this->getModuleInstance()->l('Discount', self::FILENAME),
+            'values' => array(),
+            'filter_show_limit' => $filter['filter_show_limit'],
+            'filter_type' => $filter['filter_type'],
+            'position' => $filter['position']
+        );
+
+        $aggregation = $this->getAggregation(self::FILTER_TYPE_DISCOUNT.'_'.$currency->id);
+        if (!$aggregation) {
+            return $discount_filter;
+        }
+        ksort($aggregation);
+
+        $selected_filters = $this->getSelectedFilters();
+        $discount_array = array();
+
+        foreach ($aggregation as $value => $nbr) {
+            $discount_array[$value] = array(
+                'name' => $value.'%',
+                'nbr' => $nbr
+            );
+            if (isset($selected_filters['discount']) && in_array($value, $selected_filters['discount'])) {
+                $discount_array[$value]['checked'] = true;
+            }
+        }
+        $discount_filter['values'] = $discount_array;
+
+        return $discount_filter;
     }
 
     /**
@@ -1110,8 +1193,9 @@ class ElasticSearchFilter extends AbstractFilter
         $selected_filters = $this->getSelectedFilters();
         $manufacturers = $this->getAggregation('id_manufacturer');
 
-        if (!$manufacturers)
+        if (!$manufacturers) {
             return array();
+        }
 
         $manufacturers_with_names = $this->getModuleInstance()->getObjectsNamesByIds(
             array_keys($manufacturers),
@@ -1186,8 +1270,9 @@ class ElasticSearchFilter extends AbstractFilter
 
             $aggregation = $this->getAggregation('attribute_group_'.$id_attribute_group);
 
-            if (!$aggregation)
+            if (!$aggregation) {
                 continue;
+            }
 
             foreach ($aggregation as $id_attribute => $nbr) {
                 if ($nbr == 0 && $this->hide_0_values) {
@@ -1289,8 +1374,9 @@ class ElasticSearchFilter extends AbstractFilter
 
             $aggregation = $this->getAggregation('feature_'.$id_feature);
 
-            if (!$aggregation)
+            if (!$aggregation) {
                 continue;
+            }
 
             foreach ($aggregation as $id_feature_value => $nbr) {
                 if ($nbr == 0 && $this->hide_0_values) {
@@ -1375,8 +1461,9 @@ class ElasticSearchFilter extends AbstractFilter
 
         $aggregation = $this->getAggregation('categories');
 
-        if (empty($aggregation))
+        if (empty($aggregation)) {
             return array();
+        }
 
         $subcategories = $this->getSubcategories();
 
@@ -1410,8 +1497,9 @@ class ElasticSearchFilter extends AbstractFilter
         }
 
         // If there are no categories to display - return empty array
-        if ($this->hide_0_values && !$categories_with_products_count)
+        if ($this->hide_0_values && !$categories_with_products_count) {
             return array();
+        }
 
         $category_filter = array(
             'type_lite' => 'category',

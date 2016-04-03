@@ -143,8 +143,7 @@ class AdminElasticSearchFilterController extends ModuleAdminController
             )
         );
 
-        if (Shop::isFeatureActive())
-        {
+        if (Shop::isFeatureActive()) {
             $this->fields_form['input'][] = array(
                 'type' => 'shop',
                 'label' => $this->l('Shop association'),
@@ -170,8 +169,7 @@ class AdminElasticSearchFilterController extends ModuleAdminController
     {
         $elasticsearch_template = new ElasticSearchTemplate((int)Tools::getValue('id_elasticsearch_template'));
 
-        if (!Validate::isLoadedObject($elasticsearch_template))
-        {
+        if (!Validate::isLoadedObject($elasticsearch_template)) {
             $this->fields_value['elasticsearch_tpl_name'] = sprintf($this->l('My template %s'), date('Y-m-d'));
             $this->context->smarty->assign('elasticsearch_selected_shops', '');
             return array();
@@ -184,8 +182,9 @@ class AdminElasticSearchFilterController extends ModuleAdminController
         $return = $filters['categories'];
         $elasticsearch_selected_shops = '';
 
-        foreach ($filters['shop_list'] as $id_shop)
+        foreach ($filters['shop_list'] as $id_shop) {
             $elasticsearch_selected_shops .= $id_shop.', ';
+        }
 
         $elasticsearch_selected_shops = Tools::substr($elasticsearch_selected_shops, 0, -2);
 

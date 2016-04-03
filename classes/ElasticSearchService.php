@@ -274,26 +274,23 @@ class ElasticSearchService extends SearchService
 
     public static function getProductPricesForIndexing($id_product)
     {
-        static $groups = null;
-
-        if (is_null($groups))
-        {
-            $groups = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT id_group FROM `'._DB_PREFIX_.'group_reduction`');
-            if (!$groups)
-                $groups = array();
-        }
-
         $id_shop = (int)Context::getContext()->shop->id;
-
-        static $currency_list = null;
-
-        if (is_null($currency_list))
-            $currency_list = Currency::getCurrencies(false, 1, new Shop($id_shop));
-
         $min_price = array();
         $max_price = array();
+        $reduction_display = array();
+        $specific_prices_index = array();
 
-        if (Configuration::get('ELASTICSEARCH_PRICE_USETAX'))
+        static $currency_list = null;
+        if (is_null($currency_list)) {
+            $currency_list = Currency::getCurrencies(false, 1, new Shop($id_shop));
+        }
+        foreach ($currency_list as $currency) {
+            $max_price[$currency['id_currency']] = null;
+            $min_price[$currency['id_currency']] = null;
+            $reduction_display[$currency['id_currency']] = array();
+        }
+
+        if (Configuration::get('ELASTICSEARCH_PRICE_USETAX')) {
             $max_tax_rate = Db::getInstance()->getValue('
                 SELECT max(t.rate) max_rate
                 FROM `'._DB_PREFIX_.'product_shop` p
@@ -302,78 +299,98 @@ class ElasticSearchService extends SearchService
                 LEFT JOIN `'._DB_PREFIX_.'tax` t ON (t.id_tax = tr.id_tax AND t.active = 1)
                 WHERE id_product = '.(int)$id_product.'
                 GROUP BY id_product');
-        else
+        } else {
             $max_tax_rate = 0;
-
-        $product_min_prices = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
-            SELECT id_shop, id_currency, id_country, id_group, from_quantity
-            FROM `'._DB_PREFIX_.'specific_price`
-            WHERE id_product = '.(int)$id_product
-        );
-
-        // Get min price
-        foreach ($currency_list as $currency)
-        {
-            $price = Product::priceCalculation($id_shop, (int)$id_product, null, null, null, null,
-                $currency['id_currency'], null, null, false, 6, false, true, true,
-                $specific_price_output, true);
-
-            if (!isset($max_price[$currency['id_currency']]))
-                $max_price[$currency['id_currency']] = 0;
-            if (!isset($min_price[$currency['id_currency']]))
-                $min_price[$currency['id_currency']] = null;
-            if ($price > $max_price[$currency['id_currency']])
-                $max_price[$currency['id_currency']] = $price;
-            if ($price == 0)
-                continue;
-            if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
-                $min_price[$currency['id_currency']] = $price;
         }
 
-        foreach ($product_min_prices as $specific_price)
-            foreach ($currency_list as $currency)
-            {
-                if ($specific_price['id_currency'] && $specific_price['id_currency'] != $currency['id_currency'])
-                    continue;
-                $price = Product::priceCalculation((($specific_price['id_shop'] == 0) ? null : (int)$specific_price['id_shop']), (int)$id_product,
-                    null, (($specific_price['id_country'] == 0) ? null : $specific_price['id_country']), null, null,
-                    $currency['id_currency'], (($specific_price['id_group'] == 0) ? null : $specific_price['id_group']),
-                    $specific_price['from_quantity'], false, 6, false, true, true, $specific_price_output, true);
+        // Get price for all combinations + default (base)
+        $combinations_query = new DbQuery();
+        $combinations_query->select('pas.`id_product_attribute`');
+        $combinations_query->from('product_attribute_shop', 'pas');
+        $combinations_query->where('pas.`id_product` = '.(int)$id_product);
+        $combinations_query->where('pas.`id_shop` = '.(int)$id_shop);
+        $combinations = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($combinations_query);
+        if (!$combinations) {
+            $combinations = array();
+        } else {
+            $combinations = array_map(
+                function ($c) {
+                    return (int)$c['id_product_attribute'];
+                },
+                $combinations
+            );
+        }
+        array_unshift($combinations, null); // Add default
 
-                if (!isset($max_price[$currency['id_currency']]))
-                    $max_price[$currency['id_currency']] = 0;
-                if (!isset($min_price[$currency['id_currency']]))
-                    $min_price[$currency['id_currency']] = null;
-                if ($price > $max_price[$currency['id_currency']])
+        foreach ($combinations as $combination) {
+            foreach ($currency_list as $currency) {
+                $price = Product::priceCalculation(
+                    $id_shop,
+                    (int)$id_product,
+                    $combination,
+                    null,
+                    null,
+                    null,
+                    $currency['id_currency'],
+                    null,
+                    null,
+                    false,
+                    6,
+                    false,
+                    true,
+                    true,
+                    $specific_price_output,
+                    true
+                );
+                if ($price == 0) {
+                    continue;
+                }
+                if ($specific_price_output !== false) {
+                    $specific_prices_index[] = (int)$specific_price_output['id_specific_price'];
+                }
+                if ($price > $max_price[$currency['id_currency']]) {
                     $max_price[$currency['id_currency']] = $price;
-                if ($price == 0)
-                    continue;
-                if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
+                }
+                if ($price < $min_price[$currency['id_currency']]) {
                     $min_price[$currency['id_currency']] = $price;
-            }
+                }
 
-        foreach ($groups as $group)
-            foreach ($currency_list as $currency)
-            {
-                $price = Product::priceCalculation(null, (int)$id_product, null, null, null, null, (int)$currency['id_currency'], (int)$group['id_group'],
-                    null, false, 6, false, true, true, $specific_price_output, true);
+                $price_without_reduction = Product::priceCalculation(
+                    $id_shop,
+                    (int)$id_product,
+                    $combination,
+                    null,
+                    null,
+                    null,
+                    $currency['id_currency'],
+                    null,
+                    null,
+                    false,
+                    6,
+                    false,
+                    false,
+                    true,
+                    $specific_price_output,
+                    true
+                );
 
-                if (!isset($max_price[$currency['id_currency']]))
-                    $max_price[$currency['id_currency']] = 0;
-                if (!isset($min_price[$currency['id_currency']]))
-                    $min_price[$currency['id_currency']] = null;
-                if ($price > $max_price[$currency['id_currency']])
-                    $max_price[$currency['id_currency']] = $price;
-                if ($price == 0)
-                    continue;
-                if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
-                    $min_price[$currency['id_currency']] = $price;
+                if ($price_without_reduction > $price) {
+                    $reduction_display[$currency['id_currency']][] = round((1 - $price/$price_without_reduction) * 100);
+                }
             }
+        }
 
         $values = array();
         foreach ($currency_list as $currency) {
             $values['price_min_'.(int)$currency['id_currency']] = (int)floor($min_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
             $values['price_max_'.(int)$currency['id_currency']] = (int)ceil($max_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
+            $values['discount_'.(int)$currency['id_currency']] = array_unique($reduction_display[$currency['id_currency']]);
+        }
+
+        // Save specific prices index state
+        if (class_exists('SpecificPriceElasticIndex')) {
+            $specific_prices_index = array_unique($specific_prices_index);
+            SpecificPriceElasticIndex::setProductIndex($id_product, $id_shop, $specific_prices_index);
         }
 
         return $values;
@@ -381,8 +398,7 @@ class ElasticSearchService extends SearchService
 
     public function indexAllProducts($delete_old = true)
     {
-        try
-        {
+        try {
             if ($delete_old) {
                 $this->deleteShopIndex();
                 $this->initIndex(null, true);

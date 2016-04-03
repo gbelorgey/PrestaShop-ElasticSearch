@@ -99,7 +99,7 @@ class ElasticSearch extends Module
                 `id_shop` int(11) unsigned NOT NULL,
                 `id_manufacturer` int(10) unsigned NOT NULL,
                 `id_value` int(10) unsigned DEFAULT "0",
-                `type` enum("category","id_feature","id_attribute_group","quantity","condition","manufacturer","weight","price") NOT NULL,
+                `type` enum("category","id_feature","id_attribute_group","quantity","condition","manufacturer","weight","price","discount") NOT NULL,
                 `position` int(10) unsigned NOT NULL,
                 `filter_type` int(10) unsigned NOT NULL DEFAULT "0",
                 `filter_show_limit` int(10) unsigned NOT NULL DEFAULT "0",
@@ -114,6 +114,14 @@ class ElasticSearch extends Module
             PRIMARY KEY (`id_elasticsearch_template`,`id_shop`),
             KEY `id_shop` (`id_shop`)
             ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8
+        ') && DB::getInstance()->execute('
+            CREATE TABLE `'._DB_PREFIX_.'elasticsearch_specific_price_index` (
+              `id_specific_price` int(10) unsigned NOT NULL,
+              `id_product` int(10) unsigned NOT NULL,
+              `id_shop` int(10) unsigned NOT NULL,
+              `date` datetime NOT NULL,
+              PRIMARY KEY (`id_specific_price`, `id_product`, `id_shop`)
+            ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;
         ');
     }
 
@@ -121,9 +129,11 @@ class ElasticSearch extends Module
     {
         $configuration = $this->getDefaultConfiguration();
 
-        foreach ($configuration as $setting => $value)
-            if (!Configuration::updateValue($setting, $value))
+        foreach ($configuration as $setting => $value) {
+            if (!Configuration::updateValue($setting, $value)) {
                 return false;
+            }
+        }
 
         return true;
     }
@@ -148,19 +158,20 @@ class ElasticSearch extends Module
 
     private function installTab($name, $id_parent, $class_name)
     {
-        if (!Tab::getIdFromClassName($class_name))
-        {
+        if (!Tab::getIdFromClassName($class_name)) {
             $module_tab = new Tab;
 
-            foreach (Language::getLanguages(true) as $language)
+            foreach (Language::getLanguages(true) as $language) {
                 $module_tab->name[$language['id_lang']] = $name;
+            }
 
             $module_tab->class_name = $class_name;
             $module_tab->id_parent = $id_parent;
             $module_tab->module = $this->name;
 
-            if (!$module_tab->add())
+            if (!$module_tab->add()) {
                 return false;
+            }
 
             return $module_tab->id;
         }
@@ -180,8 +191,9 @@ class ElasticSearch extends Module
 
     public function uninstall()
     {
-        if (!parent::uninstall() || !$this->uninstallTab(self::SETTINGS_CLASSNAME))
+        if (!parent::uninstall() || !$this->uninstallTab(self::SETTINGS_CLASSNAME)) {
             return false;
+        }
 
         $search = $this->getSearchServiceObject();
 
@@ -195,8 +207,10 @@ class ElasticSearch extends Module
     {
         return DB::getInstance()->execute('
             DROP TABLE IF EXISTS
+                `'._DB_PREFIX_.'elasticsearch_specific_price_index`,
                 `'._DB_PREFIX_.'elasticsearch_template`,
                 `'._DB_PREFIX_.'elasticsearch_category`,
+                `'._DB_PREFIX_.'elasticsearch_manufacturer`,
                 `'._DB_PREFIX_.'elasticsearch_template_shop`
         ');
     }
@@ -205,17 +219,18 @@ class ElasticSearch extends Module
     {
         $configuration = $this->getDefaultConfiguration();
 
-        foreach (array_keys($configuration) as $setting)
-            if (!Configuration::deleteByName($setting))
+        foreach (array_keys($configuration) as $setting) {
+            if (!Configuration::deleteByName($setting)) {
                 return false;
+            }
+        }
 
         return true;
     }
 
     private function uninstallTab($class_name)
     {
-        if ($id_tab = (int)Tab::getIdFromClassName($class_name))
-        {
+        if ($id_tab = (int)Tab::getIdFromClassName($class_name)) {
             $tab = new Tab((int)$id_tab);
 
             return $tab->delete();
@@ -334,15 +349,14 @@ class ElasticSearch extends Module
 
         $elasticsearch_template = new ElasticSearchTemplate((int)$id_elasticsearch_template);
 
-        if (Validate::isLoadedObject($elasticsearch_template))
-        {
+        if (Validate::isLoadedObject($elasticsearch_template)) {
             $elasticsearch_template->delete();
 
             $this->buildLayered();
             $this->html .= $this->displayConfirmation($this->l('Filter template deleted, categories updated (reverted to default Filter template)'));
-        }
-        else
+        } else {
             $this->html .= $this->displayError($this->l('Filter template not found'));
+        }
     }
 
     private function deleteMenuFilterTemplate()
@@ -438,10 +452,12 @@ class ElasticSearch extends Module
                         $type = 0;
                         $limit = 0;
 
-                        if (Tools::getValue($key.'_filter_type'))
+                        if (Tools::getValue($key.'_filter_type')) {
                             $type = Tools::getValue($key.'_filter_type');
-                        if (Tools::getValue($key.'_filter_show_limit'))
+                        }
+                        if (Tools::getValue($key.'_filter_show_limit')) {
                             $limit = Tools::getValue($key.'_filter_show_limit');
+                        }
 
                         $filter_values[$key] = array(
                             'filter_type' => (int)$type,
@@ -638,30 +654,34 @@ class ElasticSearch extends Module
                                     $limit = $value['filter_show_limit'];
                                     $n++;
 
-                                    if ($key == 'elasticsearch_selection_stock')
+                                    if ($key == 'elasticsearch_selection_stock') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "quantity", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if ($key == 'elasticsearch_selection_subcategories')
+                                    } elseif ($key == 'elasticsearch_selection_subcategories') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "category", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if ($key == 'elasticsearch_selection_condition')
+                                    } elseif ($key == 'elasticsearch_selection_condition') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "condition", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if ($key == 'elasticsearch_selection_weight_slider')
+                                    } elseif ($key == 'elasticsearch_selection_weight_slider') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "weight", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if ($key == 'elasticsearch_selection_price_slider')
+                                    } elseif ($key == 'elasticsearch_selection_price_slider') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "price", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if ($key == 'elasticsearch_selection_manufacturer')
+                                    } elseif ($key == 'elasticsearch_selection_discount') {
+                                        $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "discount", '.(int)$n.', '.(int)$limit.', '.
+                                            (int)$type.', "'.date('Y-m-d H:i:s').'"),';
+                                    } elseif ($key == 'elasticsearch_selection_manufacturer') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', NULL, "manufacturer", '.(int)$n.', '.(int)$limit.', '.
                                             (int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_')
+                                    } elseif (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_ag_', '', $key).
                                             ', "id_attribute_group", '.(int)$n.', '.(int)$limit.', '.(int)$type.', "'.date('Y-m-d H:i:s').'"),';
-                                    else if (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_')
+                                    } elseif (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_') {
                                         $sql_to_insert_category .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_feat_', '', $key).
                                             ', "id_feature", '.(int)$n.', '.(int)$limit.', '.(int)$type.', "'.date('Y-m-d H:i:s').'"),';
+                                    }
                                 }
                             }
                         }
@@ -816,10 +836,11 @@ class ElasticSearch extends Module
         $search = $this->getSearchServiceObject();
         $search->indexAllProducts($delete_old);
 
-        if (!$search->errors)
+        if (!$search->errors) {
             $this->html .= $this->displayConfirmation($this->l('Products indexed successfully'));
-        else
+        } else {
             $this->html .= $this->renderErrors($search->errors);
+        }
     }
 
     private function addTreeJs()
@@ -829,8 +850,9 @@ class ElasticSearch extends Module
         $bo_theme = ((Validate::isLoadedObject($this->context->employee)
             && $this->context->employee->bo_theme) ? $this->context->employee->bo_theme : 'default');
 
-        if (!file_exists(_PS_BO_ALL_THEMES_DIR_.$bo_theme.DIRECTORY_SEPARATOR.'template'))
+        if (!file_exists(_PS_BO_ALL_THEMES_DIR_.$bo_theme.DIRECTORY_SEPARATOR.'template')) {
             $bo_theme = 'default';
+        }
 
         $js_path = __PS_BASE_URI__.$admin_webpath.'/themes/'.$bo_theme.'/js/tree.js';
 

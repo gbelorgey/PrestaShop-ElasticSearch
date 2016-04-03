@@ -9,6 +9,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
 
     /* Available filters types */
     const FILTER_TYPE_PRICE = 'price';
+    const FILTER_TYPE_DISCOUNT = 'discount';
     const FILTER_TYPE_WEIGHT = 'weight';
     const FILTER_TYPE_CONDITION = 'condition';
     const FILTER_TYPE_QUANTITY = 'quantity';
@@ -63,6 +64,9 @@ abstract class AbstractFilter extends Brad\AbstractLogger
             switch ($type) {
                 case self::FILTER_TYPE_PRICE:
                     $filter = $this->getPriceFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_DISCOUNT:
+                    $filter = $this->getDiscountFilter($enabled_filter);
                     break;
                 case self::FILTER_TYPE_WEIGHT:
                     $filter = $this->getWeightFilter($enabled_filter);
@@ -364,6 +368,12 @@ abstract class AbstractFilter extends Brad\AbstractLogger
      * @return array price filter data to be used in template
      */
     abstract protected function getPriceFilter($values);
+
+    /**
+     * @param $values array discount filter values
+     * @return array discount filter data to be used in template
+     */
+    abstract protected function getDiscountFilter($values);
 
     /**
      * @param $values array weight filter values
