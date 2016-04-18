@@ -496,9 +496,25 @@ class ElasticSearch extends Module
 
     private function saveMenuFilterTemplate()
     {
+        $categoryBox = array();
+        $top_shelf = Configuration::get('MENU_TOP_SHELF');
+        $top_shelf = explode(';', $top_shelf);
+        $top_shelf = Category::getCategoryInformations($top_shelf);
+        $categories = array_map(
+            function ($t) {
+                return (int)$t['id_category'];
+            },
+            $top_shelf
+        );
+        foreach ($categories as $_id_category) {
+            if (Tools::isSubmit('categoryBox_'.$_id_category)) {
+                $categoryBox[] = (int)$_id_category;
+            }
+        }
+
         if (!Tools::getValue('elasticsearch_tpl_name')) {
             $this->html .= $this->displayError($this->l('Filter template name required (cannot be empty)'));
-        } elseif (!Tools::getValue('categoryBox')) {
+        } elseif (!count($categoryBox)) {
             $this->html .= $this->displayError($this->l('You must select at least one category.'));
         } else {
             if (Tools::getValue('id_elasticsearch_menu_template')) {
@@ -506,20 +522,14 @@ class ElasticSearch extends Module
                     DELETE FROM `'._DB_PREFIX_.'elasticsearch_menu_template`
                     WHERE `id_elasticsearch_menu_template` = "'.(int)Tools::getValue('id_elasticsearch_menu_template').'"
                 ');
-
-                $this->buildMenuLayeredCategories();
             }
 
-            if (Tools::getValue('scope') == 1) {
+            if (Tools::getValue('scope') == 1) {  
                 Db::getInstance()->execute('TRUNCATE TABLE '._DB_PREFIX_.'elasticsearch_menu_template');
                 $categories = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
                     SELECT id_category
                     FROM '._DB_PREFIX_.'category
                 ');
-
-                foreach ($categories as $category) {
-                    $_POST['categoryBox'][] = (int)$category['id_category'];
-                }
             }
 
             $id_elasticsearch_menu_template = (int)Tools::getValue('id_elasticsearch_menu_template');
@@ -530,7 +540,7 @@ class ElasticSearch extends Module
             $shop_list = array();
             $assos = array();
 
-            if ($selected_shops = Tools::getValue('checkBoxShopAsso_elasticsearch_template')) {
+            if ($selected_shops = Tools::getValue('checkBoxShopAsso_elasticsearch_menu_template')) {
                 foreach (array_keys($selected_shops) as $id_shop) {
                     $assos[] = array('id_object' => (int)$id_elasticsearch_menu_template, 'id_shop' => (int)$id_shop);
                     $shop_list[] = (int)$id_shop;
@@ -542,23 +552,17 @@ class ElasticSearch extends Module
             Db::getInstance()->execute('
                 DELETE FROM '._DB_PREFIX_.'elasticsearch_menu_template_shop
                 WHERE `id_elasticsearch_menu_template` = '.(int)$id_elasticsearch_menu_template);
-
-            if (count(Tools::getValue('categoryBox'))) {
-                /* Clean categoryBox before use */
-                if (is_array(Tools::getValue('categoryBox'))) {
-                    foreach (Tools::getValue('categoryBox') as &$category_box_tmp) {
-                        $category_box_tmp = (int)$category_box_tmp;
-                    }
-                }
-
+            
+           
+            if (count($categoryBox)) {
                 $filter_values = array();
 
-                foreach (Tools::getValue('categoryBox') as $idc) {
+                foreach ($categoryBox as $idc) {
                     $filter_values['categories'][] = (int)$idc;
                 }
                 $filter_values['shop_list'] = $shop_list;
 
-                foreach (Tools::getValue('categoryBox') as $id_category_elasticsearch) {
+                foreach ($categoryBox as $id_category_elasticsearch) {
                     foreach ($_POST as $key => $value) {
                         if (Tools::substr($key, 0, 23) == 'elasticsearch_selection' && $value == 'on') {
                             $type = 0;
@@ -765,7 +769,7 @@ class ElasticSearch extends Module
         $values = false;
         $sql_to_insert = '
             INSERT INTO '._DB_PREFIX_.'elasticsearch_menu_category
-                (`id_category`, `id_shop`, `id_value`, `type`, `position`, `filter_show_limit`, `push_foward`,`date_add`)
+                (`id_menu_category`, `id_shop`, `id_value`, `type`, `position`, `filter_show_limit`, `push_foward`,`date_add`)
             VALUES ';
 
         foreach ($res as $filter_template) {
@@ -786,8 +790,10 @@ class ElasticSearch extends Module
                             if (Tools::substr($key, 0, 24) == 'elasticsearch_selection_') {
                                 $values = true;
                                 $push_foward = 0;
-                                if (isset($value['push_foward'])) {
-                                    $push_foward = (int)$value['push_foward'];
+                                if (isset($data[$key.'_push_foward'])) {
+                                    if (isset($value['push_foward'])) {
+                                        $push_foward = (int)$value['push_foward'];
+                                    }
                                 }
                                 $limit = $value['filter_show_limit'];
                                 $n++;
@@ -813,7 +819,7 @@ class ElasticSearch extends Module
                                 } elseif (Tools::substr($key, 0, 27) == 'elasticsearch_selection_ag_') {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_ag_', '', $key).
                                         ', "id_attribute_group", '.(int)$n.', '.(int)$limit.', '.$push_foward.', "'.date('Y-m-d H:i:s').'"),';
-                                } elseif (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_') {
+                                } elseif (Tools::substr($key, 0, 29) == 'elasticsearch_selection_feat_' && !preg_match('/push_foward$/', $key)) {
                                     $sql_to_insert .= '('.(int)$id_category.', '.(int)$id_shop.', '.(int)str_replace('elasticsearch_selection_feat_', '', $key).
                                         ', "id_feature", '.(int)$n.', '.(int)$limit.', '.$push_foward.', "'.date('Y-m-d H:i:s').'"),';
                                 }
@@ -841,6 +847,16 @@ class ElasticSearch extends Module
         } else {
             $this->html .= $this->renderErrors($search->errors);
         }
+    }
+    
+    private function indexCategories()
+    {
+            $search = $this->getSearchServiceObject();
+            $search->indexAllCategories();
+            if (!$search->errors)
+                    $this->html .= $this->displayConfirmation($this->l('Categories indexed successfully'));
+            else
+                    $this->html .= $this->renderErrors($search->errors);
     }
 
     private function addTreeJs()
@@ -1348,5 +1364,12 @@ class ElasticSearch extends Module
             $result[$row['id_attribute']] = $row['color'];
 
         return $result;
+    }
+    
+    public function getSearchFilter()
+    {
+        require_once(_ELASTICSEARCH_CLASSES_DIR_.'ElasticSearchFilter.php');
+        $elasticsearch_filter = new ElasticSearchFilter();
+        return $elasticsearch_filter;
     }
 }

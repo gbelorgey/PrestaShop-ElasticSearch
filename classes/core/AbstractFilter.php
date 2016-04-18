@@ -56,7 +56,6 @@ abstract class AbstractFilter extends Brad\AbstractLogger
     {
         $this->enabled_filters = $this->getEnabledFilters($id_entity, $entity);
         $filters = array();
-
         foreach ($this->enabled_filters as $type => $enabled_filter) {
             $filter = array();
 
@@ -90,7 +89,6 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                     $filter = $this->getCategoryFilter($enabled_filter);
                     break;
             }
-
             //Merging filters to one array
             if ($filter) {
                 if (is_array(reset($filter))) {
@@ -343,6 +341,43 @@ abstract class AbstractFilter extends Brad\AbstractLogger
         }
 
         return $this->module_instance;
+    }
+    
+    public function generateFilters($id_entity, $entity = 'category', array $extra_filters = array())
+    {
+        $this->enabled_filters = $this->getEnabledFilters($id_entity, $entity);
+        $filter = array();
+        foreach ($this->enabled_filters as $type => $enabled_filter) {
+            $filter = array();
+            /* Getting filters by types */
+            switch ($type) {
+                case self::FILTER_TYPE_PRICE:
+                    $filter = $this->getPriceFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_WEIGHT:
+                    $filter = $this->getWeightFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_CONDITION:
+                    $filter = $this->getConditionFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_QUANTITY:
+                    $filter = $this->getQuantityFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_MANUFACTURER:
+                    $filter = $this->getManufacturerFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_ATTRIBUTE_GROUP:
+                    $filter = $this->getAttributeGroupFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_FEATURE:
+                    $filter = $this->getFeatureFilter($enabled_filter);
+                    break;
+                case self::FILTER_TYPE_CATEGORY:
+                    $filter = $this->getCategoryFilter($enabled_filter);
+                    break;
+            }
+        }
+        return $filter;
     }
 
     /**

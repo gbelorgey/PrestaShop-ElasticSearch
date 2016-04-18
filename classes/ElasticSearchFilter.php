@@ -552,10 +552,10 @@ class ElasticSearchFilter extends AbstractFilter
                 return array(
                     'term' => array(
                         'categories' => $this->id_category
+                        
                     )
                 );
             }
-
             $subcategories = $this->getSubcategories(true);
 
             if ($subcategories) {
@@ -751,7 +751,6 @@ class ElasticSearchFilter extends AbstractFilter
                 GROUP BY `type`, `id_value`
                 ORDER BY `position` ASC'
             );
-
             $formatted_filters = array();
 
             while ($row = Db::getInstance()->nextRow($filters)) {
@@ -1337,7 +1336,6 @@ class ElasticSearchFilter extends AbstractFilter
                 }
             }
         }
-
         return $attributes_array;
     }
 
@@ -1615,7 +1613,6 @@ class ElasticSearchFilter extends AbstractFilter
             $query_all = array(
                 'aggs' => $this->getFiltersProductsCountsAggregationQuery($this->enabled_filters)
             );
-
             $result = AbstractFilter::$search_service->search(
                 'products',
                 $query_all,
@@ -1626,7 +1623,6 @@ class ElasticSearchFilter extends AbstractFilter
                 null,
                 true
             );
-
             if (!isset($result['aggregations'])) {
                 $this->filters_products_counts = array();
             } else {
@@ -1666,7 +1662,6 @@ class ElasticSearchFilter extends AbstractFilter
     public function getAggregation($name, $partial_name = false)
     {
         $aggregations = $this->getAggregations();
-
         if ($partial_name) {
             //caching the result
             $cache_key = 'aggregation_'.$name;

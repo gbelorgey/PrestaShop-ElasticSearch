@@ -78,12 +78,9 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
 
     public function initForm()
     {
-        $categories = Category::getRootCategories((int)$this->context->language->id);
-        $id_root = (int)$categories[0]['id_category'];
-
-        $root_category = Shop::getContext() == Shop::CONTEXT_SHOP && Tools::isSubmit('id_shop') ? new Category((int)$this->context->shop->id_category) :
-            new Category((int)$id_root);
-
+        $top_shelf = Configuration::get('MENU_TOP_SHELF');
+        $top_shelf = explode(';', $top_shelf);
+        $top_shelf = Category::getCategoryInformations($top_shelf);
         $this->object = new ElasticMenuSearchTemplate();
 
         $this->fields_form = array(
@@ -100,17 +97,15 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
                     'desc' => $this->l('Only as a reminder')
                 ),
                 array(
-                    'type' => 'categories',
+                    'type' => 'checkbox',
                     'name' => 'categoryBox',
-                    'label' => $this->l(' Categories used for this template'),
+                    'label' => $this->l('Categories used for this template'),
                     'required' => true,
-                    'tree' => array(
-                        'id' => 'categories-tree',
-                        'selected_categories' => $this->getSelectedCategories(),
-                        'root_category' => $root_category->id,
-                        'use_search' => false,
-                        'use_checkbox' => true
-                    ),
+                    'values' => array(
+                        'id' => 'id_category',
+                        'name' => 'name',
+                        'query' => $top_shelf
+                    )
                 )
             ),
             'submit' => array(
@@ -132,10 +127,16 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
             'required' => true,
             'name' => 'templateSettingsManagement'
         );
+        
+        $categories = $this->getSelectedCategories();
+        foreach ($categories as $id_category) {
+            $this->fields_value['categoryBox_'.$id_category] = true;
+        }
+        
         $this->fields_value['templateSettingsManagement'] = $this->displayFilterTemplateManagemetList();
     }
 
-    private function getSelectedCategories()
+    protected function getSelectedCategories()
     {
         $elasticsearch_template = new ElasticMenuSearchTemplate((int)Tools::getValue('id_elasticsearch_menu_template'));
 
@@ -157,7 +158,6 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
         }
 
         $elasticsearch_selected_shops = Tools::substr($elasticsearch_selected_shops, 0, -2);
-
         $this->context->smarty->assign('elasticsearch_selected_shops', $elasticsearch_selected_shops);
 
         unset($filters['categories']);
