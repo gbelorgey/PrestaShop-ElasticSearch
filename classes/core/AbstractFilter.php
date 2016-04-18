@@ -342,11 +342,11 @@ abstract class AbstractFilter extends Brad\AbstractLogger
 
         return $this->module_instance;
     }
-    
+
     public function generateFilters($id_entity, $entity = 'category', array $extra_filters = array())
     {
         $this->enabled_filters = $this->getEnabledFilters($id_entity, $entity);
-        $filter = array();
+        $filters = array();
         foreach ($this->enabled_filters as $type => $enabled_filter) {
             $filter = array();
             /* Getting filters by types */
@@ -368,6 +368,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                     break;
                 case self::FILTER_TYPE_ATTRIBUTE_GROUP:
                     $filter = $this->getAttributeGroupFilter($enabled_filter);
+                    var_dump($filter);
                     break;
                 case self::FILTER_TYPE_FEATURE:
                     $filter = $this->getFeatureFilter($enabled_filter);
@@ -376,8 +377,17 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                     $filter = $this->getCategoryFilter($enabled_filter);
                     break;
             }
+
+            //Merging filters to one array
+            if ($filter) {
+                if (is_array(reset($filter))) {
+                    $filters = array_merge($filters, $filter);
+                } else {
+                    $filters[] = $filter;
+                }
+            }
         }
-        return $filter;
+        return $filters;
     }
 
     /**
