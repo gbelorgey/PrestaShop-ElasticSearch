@@ -368,7 +368,6 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                     break;
                 case self::FILTER_TYPE_ATTRIBUTE_GROUP:
                     $filter = $this->getAttributeGroupFilter($enabled_filter);
-                    var_dump($filter);
                     break;
                 case self::FILTER_TYPE_FEATURE:
                     $filter = $this->getFeatureFilter($enabled_filter);
