@@ -253,7 +253,7 @@ class ElasticSearchFilter extends AbstractFilter
         if (empty($pagination)) {
             $pagination = $this->getProductsBySelectedFilters($selected_filters, true);
         }
-        
+
         $order_by_values = array(0 => 'name', 1 => 'price', 6 => 'quantity', 7 => 'reference');
         $order_way_values = array(0 => 'asc', 1 => 'desc');
 
@@ -552,7 +552,7 @@ class ElasticSearchFilter extends AbstractFilter
                 return array(
                     'term' => array(
                         'categories' => $this->id_category
-                        
+
                     )
                 );
             }
@@ -1371,7 +1371,6 @@ class ElasticSearchFilter extends AbstractFilter
             );
 
             $aggregation = $this->getAggregation('feature_'.$id_feature);
-
             if (!$aggregation) {
                 continue;
             }

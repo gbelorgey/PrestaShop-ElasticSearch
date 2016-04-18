@@ -127,12 +127,14 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
             'required' => true,
             'name' => 'templateSettingsManagement'
         );
-        
+
         $categories = $this->getSelectedCategories();
-        foreach ($categories as $id_category) {
-            $this->fields_value['categoryBox_'.$id_category] = true;
+        if (is_array($categories)) {
+            foreach ($categories as $id_category) {
+                $this->fields_value['categoryBox_'.$id_category] = true;
+            }
         }
-        
+
         $this->fields_value['templateSettingsManagement'] = $this->displayFilterTemplateManagemetList();
     }
 
@@ -150,7 +152,11 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
         $this->identifier = 'id_elasticsearch_menu_template';
         $filters = unserialize($elasticsearch_template->filters);
         $this->fields_value['elasticsearch_tpl_name'] = $elasticsearch_template->name;
-        $return = $filters['categories'];
+
+        $return = array();
+        if (isset($filters['categories'])) {
+            $return = $filters['categories'];
+        }
         $elasticsearch_selected_shops = '';
 
         foreach ($filters['shop_list'] as $id_shop) {
