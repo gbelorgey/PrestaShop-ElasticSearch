@@ -213,13 +213,15 @@ abstract class AbstractFilter extends Brad\AbstractLogger
         if ($entity == 'category') {
             Context::getContext()->smarty->assign(array(
                 'category' => $object_entity,
-                'page_name' => 'category'
+                'page_name' => 'category',
+                'active_highlighting' => true,
             ));
         }
         if ($entity == 'manufacturer') {
             Context::getContext()->smarty->assign(array(
                 'manufacturer' => $object_entity,
-                'page_name' => 'manufacturer'
+                'page_name' => 'manufacturer',
+                'active_highlighting' => true,
             ));
         }
         Context::getContext()->smarty->assign(array_merge(
