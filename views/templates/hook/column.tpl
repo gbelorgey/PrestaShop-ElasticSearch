@@ -63,7 +63,7 @@
                     </div>
                     {if isset($subcategories) && count($subcategories) > 0}
                         <div class="elasticsearch__block">
-                            <div class="elasticsearch__block__title elasticsearch__block__title--expanded js-filter-toggle ">
+                            <div class="elasticsearch__block__title elasticsearch__block__title--expanded js-filter-toggle js-filter-subcategories">
                                 <span class="elasticsearch__block__title__inner">
                                     {l s='Produits'}
                                     <span class="picto picto--chevron-right"></span>
