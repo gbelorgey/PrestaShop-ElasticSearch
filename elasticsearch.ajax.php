@@ -8,11 +8,15 @@ include_once(dirname(__FILE__).'/../../config/config.inc.php');
 include_once(dirname(__FILE__).'/../../init.php');
 
 /* Fix for multishop */
-if (Validate::isLoadedObject(Context::getContext()->cart)) {
-    $cart = Context::getContext()->cart;
-
-    Shop::setContext(Shop::CONTEXT_SHOP, $cart->id_shop);
-    Context::getContext()->shop = new Shop($cart->id_shop);
+$id_shop = Tools::getValue('id_shop');
+if ($id_shop) {
+    $shop = new Shop((int)$id_shop);
+    if (Validate::isLoadedObject($shop)) {
+        Shop::setContext(Shop::CONTEXT_SHOP, $shop->id);
+        Context::getContext()->shop = $shop;
+    }
+} else {
+    die();
 }
 /* End fix for multishop */
 
