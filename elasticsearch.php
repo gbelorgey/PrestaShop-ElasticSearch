@@ -524,7 +524,7 @@ class ElasticSearch extends Module
                 ');
             }
 
-            if (Tools::getValue('scope') == 1) {  
+            if (Tools::getValue('scope') == 1) {
                 Db::getInstance()->execute('TRUNCATE TABLE '._DB_PREFIX_.'elasticsearch_menu_template');
                 $categories = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
                     SELECT id_category
@@ -552,8 +552,8 @@ class ElasticSearch extends Module
             Db::getInstance()->execute('
                 DELETE FROM '._DB_PREFIX_.'elasticsearch_menu_template_shop
                 WHERE `id_elasticsearch_menu_template` = '.(int)$id_elasticsearch_menu_template);
-            
-           
+
+
             if (count($categoryBox)) {
                 $filter_values = array();
 
@@ -848,7 +848,7 @@ class ElasticSearch extends Module
             $this->html .= $this->renderErrors($search->errors);
         }
     }
-    
+
     private function indexCategories()
     {
             $search = $this->getSearchServiceObject();
@@ -1365,7 +1365,7 @@ class ElasticSearch extends Module
 
         return $result;
     }
-    
+
     public function getSearchFilter()
     {
         require_once(_ELASTICSEARCH_CLASSES_DIR_.'ElasticSearchFilter.php');

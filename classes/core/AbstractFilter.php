@@ -388,6 +388,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
                 }
             }
         }
+
         return $filters;
     }
 

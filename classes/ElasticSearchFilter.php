@@ -1336,6 +1336,7 @@ class ElasticSearchFilter extends AbstractFilter
                 }
             }
         }
+
         return $attributes_array;
     }
 
@@ -1622,6 +1623,7 @@ class ElasticSearchFilter extends AbstractFilter
                 null,
                 true
             );
+
             if (!isset($result['aggregations'])) {
                 $this->filters_products_counts = array();
             } else {
