@@ -13,6 +13,7 @@ class ElasticSearchFilter extends AbstractFilter
     public $price_filter = array();
     public $weight_filter = array();
     private $selected_filters;
+    protected static $allowedFilters = array();
 
     public function __construct()
     {
@@ -1278,6 +1279,10 @@ class ElasticSearchFilter extends AbstractFilter
                     continue;
                 }
 
+                if ($this->disallowFilter('attribute', $id_attribute_group, $id_attribute)) {
+                    continue;
+                }
+
                 $hide_filter = false;
 
                 $attributes_names[] = $id_attribute;
@@ -1378,6 +1383,10 @@ class ElasticSearchFilter extends AbstractFilter
 
             foreach ($aggregation as $id_feature_value => $nbr) {
                 if ($nbr == 0 && $this->hide_0_values) {
+                    continue;
+                }
+
+                if ($this->disallowFilter('feature', $id_feature, $id_feature_value)) {
                     continue;
                 }
 
@@ -1709,5 +1718,33 @@ class ElasticSearchFilter extends AbstractFilter
             ORDER BY `level_depth` ASC, category_shop.`position` ASC');
 
         return $result;
+    }
+
+    public function allowFilter($type, $typeId, $id)
+    {
+        if (!array_key_exists($type, static::$allowedFilters)) {
+            static::$allowedFilters[ $type ] = array();
+
+            $sql = 'SELECT `value`
+                    FROM `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
+                    WHERE TRUE
+                    AND   `id_menu_category` = ' . $this->id_category . '
+                    AND   `id_shop` = ' . Context::getContext()->shop->id . '
+                    AND   `type` = "' . pSQL($type) . '"
+                    AND   `type_id` = ' . $typeId . '
+                    ;';
+
+            foreach (Db::getInstance()->executeS($sql) as $row) {
+                static::$allowedFilters[ $type ][] = $row['value'];
+            }
+        }
+
+        // Si pas de config, on accpete tout, sinon on filtre
+        return !count(static::$allowedFilters[ $type ]) || in_array($id, static::$allowedFilters[ $type ]);
+    }
+
+    public function disallowFilter($type, $typeId, $id)
+    {
+        return !$this->allowFilter($type, $typeId, $id);
     }
 }
