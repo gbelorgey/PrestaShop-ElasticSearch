@@ -122,6 +122,22 @@ class ElasticSearch extends Module
               `date` datetime NOT NULL,
               PRIMARY KEY (`id_specific_price`, `id_product`, `id_shop`)
             ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;
+        ') && DB::getInstance()->execute('
+            CREATE TABLE `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` (
+              `id_elasticsearch_menu_category_values` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+              `id_menu_category` INT(10) UNSIGNED NOT NULL,
+              `id_shop` INT(10) UNSIGNED NOT NULL,
+              `type` VARCHAR(50) NOT NULL,
+              `type_id` INT(10) UNSIGNED NOT NULL,
+              `value` INT(10) UNSIGNED NOT NULL,
+              `date_add` DATETIME NOT NULL,
+              `date_upd` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_elasticsearch_menu_category_values`),
+              UNIQUE KEY `values` (`id_menu_category`, `id_shop`, `type`, `type_id`, `value`)
+            )
+            ENGINE=' . _MYSQL_ENGINE_ . '
+            COMMENT="Liste des valeurs de facettes disponibles pour le menu"
+            DEFAULT CHARSET=utf8;
         ');
     }
 
@@ -211,7 +227,8 @@ class ElasticSearch extends Module
                 `'._DB_PREFIX_.'elasticsearch_template`,
                 `'._DB_PREFIX_.'elasticsearch_category`,
                 `'._DB_PREFIX_.'elasticsearch_manufacturer`,
-                `'._DB_PREFIX_.'elasticsearch_template_shop`
+                `' . _DB_PREFIX_ . 'elasticsearch_template_shop`,
+                `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
         ');
     }
 
