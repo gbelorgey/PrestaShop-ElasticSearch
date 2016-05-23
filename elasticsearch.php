@@ -287,6 +287,19 @@ class ElasticSearch extends Module
                 $this->context->controller->addjqueryPlugin('sortable');
                 $this->displayMenuFilterTemplateManagement();
                 break;
+            case 'manage_menu_filter_template_values':
+                require_once _ELASTICSEARCH_CLASSES_DIR_ . 'ElasticSearchMenuCategoryValues.php';
+                $result = array();
+                $method = 'getAll' . ucfirst(Tools::getValue('filterType')) . 's';
+
+                if (method_exists('ElasticSearchMenuCategoryValues', $method)) {
+                    $result = ElasticSearchMenuCategoryValues::$method(Tools::getValue('filterValue'));
+                }
+
+                echo Tools::jsonEncode($result);
+                exit();
+
+                break;
             default:
                 $this->displayConfiguration();
                 break;

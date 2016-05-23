@@ -282,8 +282,11 @@
 										href="#"
 										data-toggle="modal"
 										data-target="#filter-values-modal"
+										data-shop="{Context::getContext()->shop->id}"
+										data-url="{$ajaxUrl}"
 										data-id="{$attribute_group['id_attribute_group']}"
 										data-type="attribute"
+										data-title="{l s='Attribute group: %s'|sprintf:$attribute_group['name'] mod='elasticsearch'}"
 									>
 										{if $attribute_group['n'] > 1}
 											({$attribute_group['n']}&nbsp;{l s='attributes' mod='elasticsearch'})
@@ -349,8 +352,11 @@
 										href="#"
 										data-toggle="modal"
 										data-target="#filter-values-modal"
+										data-shop="{Context::getContext()->shop->id}"
+										data-url="{$ajaxUrl}"
 										data-id="{$feature['id_feature']}"
 										data-type="feature"
+										data-title="{l s='Feature: %s'|sprintf:$feature['name'] mod='elasticsearch'}"
 									>
 										{if $feature['n'] > 1}
 											({$feature['n']}&nbsp;{l s='values' mod='elasticsearch'})
@@ -401,6 +407,13 @@
 					<h4 class="modal-title"></h4>
 				</div>
 				<div class="modal-body">
+					<select
+						class="chosen-modal"
+						multiple
+						data-placeholder="{l s='Please, pick values you want to appear'}"
+					>
+						<option></option>
+					</select>
 				</div>
 				<div class="modal-footer">
 					<button class="btn btn-default" type="button" data-dismiss="modal">{l s='Close'}</button>
