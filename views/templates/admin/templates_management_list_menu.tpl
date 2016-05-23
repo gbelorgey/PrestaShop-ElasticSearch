@@ -417,7 +417,7 @@
 				</div>
 				<div class="modal-footer">
 					<button class="btn btn-default" type="button" data-dismiss="modal">{l s='Close'}</button>
-					<button class="btn btn-primary" type="button">{l s='Save'}</button>
+					<button class="btn btn-primary js-filter-values-save" type="button">{l s='Save'}</button>
 				</div>
 			</div>
 		</div>

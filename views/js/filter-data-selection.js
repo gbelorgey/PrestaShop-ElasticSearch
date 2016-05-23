@@ -7,6 +7,25 @@
         var $select = $('select', $modal);
         var $option = $(document.createElement('option'));
 
+        $('.js-filter-values-save')
+            .on('click', function (event) {
+                var data = $select.data();
+
+                event.preventDefault();
+
+                $modal.modal('hide');
+
+                $.ajax({
+                    url: data.url,
+                    data: $.extend({}, data, {
+                        values: $select.val(),
+                    }),
+                    type: 'post',
+                    dataType: 'json',
+                });
+            })
+        ;
+
         $modal
             .on('show.bs.modal', function (event) {
                 var $link = $(event.relatedTarget);
@@ -15,6 +34,7 @@
                 $title.text(data.title);
                 $select
                     .empty()
+                    .data(data)
                 ;
 
                 $.ajax({
