@@ -274,10 +274,21 @@
 						</div>
 						<div class="col-lg-4">
 							<span class="module_name">
-								{if $attribute_group['n'] > 1}
-									{l s='Attribute group: %1$s (%2$d attributes)'|sprintf:$attribute_group['name']:$attribute_group['n'] mod='elasticsearch'}
+								{l s='Attribute group: %s'|sprintf:$attribute_group['name'] mod='elasticsearch'}
+								{if $attribute_group.n == 0}
+									({l s='no attribute' mod='elasticsearch'})
 								{else}
-									{l s='Attribute group: %1$s (%2$d attribute)'|sprintf:$attribute_group['name']:$attribute_group['n'] mod='elasticsearch'}
+									<a
+										href="#"
+										data-id="{$attribute_group['id_attribute_group']}"
+										data-type="attribute"
+									>
+										{if $attribute_group['n'] > 1}
+											({$attribute_group['n']}&nbsp;{l s='attributes' mod='elasticsearch'})
+										{else}
+											({$attribute_group['n']}&nbsp;{l s='attribute' mod='elasticsearch'})
+										{/if}
+									</a>
 								{/if}
 								{if $attribute_group['is_color_group']}
 									<img src="../img/admin/color_swatch.png" alt="" title="{l s='This group will allow user to select a color' mod='elasticsearch'}" />
@@ -328,10 +339,21 @@
 						</div>
 						<div class="col-lg-4">
 							<span class="module_name">
-								{if $feature['n'] > 1}
-									{l s='Feature: %1$s (%2$d values)'|sprintf:$feature['name']:$feature['n'] mod='elasticsearch'}
+								{l s='Feature: %s'|sprintf:$feature['name'] mod='elasticsearch'}
+								{if $feature.n == 0}
+									({l s='no value' mod='elasticsearch'})
 								{else}
-									{l s='Feature: %1$s (%2$d value)'|sprintf:$feature['name']:$feature['n'] mod='elasticsearch'}
+									<a
+										href="#"
+										data-id="{$feature['id_feature']}"
+										data-type="feature"
+									>
+										{if $feature['n'] > 1}
+											({$feature['n']}&nbsp;{l s='values' mod='elasticsearch'})
+										{else}
+											({$feature['n']}&nbsp;{l s='value' mod='elasticsearch'})
+										{/if}
+									</a>
 								{/if}
 							</span>
 						</div>
