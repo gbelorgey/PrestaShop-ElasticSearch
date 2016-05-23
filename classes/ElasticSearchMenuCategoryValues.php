@@ -87,4 +87,40 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
             return $row;
         }, DB::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql));
     }
+
+    public static function getAllFeatures($id = 0)
+    {
+        $sql = 'SELECT
+                      `fv`.`id_feature_value` AS `id`
+                    , `fvl`.`value` AS `name`
+                    , !ISNULL(`val`.`id_elasticsearch_menu_category_values`) AS `choosen`
+
+                FROM `' . _DB_PREFIX_ . 'feature_value` AS `fv`
+
+                LEFT JOIN `' . _DB_PREFIX_ . 'feature_value_lang` AS `fvl`
+                ON  `fvl`.`id_feature_value` = `fv`.`id_feature_value`
+                AND `fvl`.id_lang = ' . (int) Context::getContext()->language->id . '
+
+                LEFT JOIN `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` AS `val`
+                ON  `val`.`type_id` = `fv`.`id_feature`
+                AND `val`.`value` = `fv`.`id_feature_value`
+                AND `val`.`type` = "feature"
+
+                WHERE TRUE';
+
+        if ($id) {
+            $sql .= '
+                AND   `fv`.`id_feature` = ' . (int) $id;
+        }
+
+        $sql .= '
+                ORDER BY `fv`.`position` ASC;';
+
+        return array_map(function ($row) {
+            $row['id'] = (int) $row['id'];
+            $row['choosen'] = (bool) $row['choosen'];
+
+            return $row;
+        }, DB::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql));
+    }
 }
