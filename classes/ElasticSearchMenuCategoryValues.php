@@ -51,4 +51,40 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
             ),
         ),
     );
+
+    public static function getAllAttributes($id = 0)
+    {
+        $sql = 'SELECT
+                      `attr`.`id_attribute` AS `id`
+                    , `attr_lang`.`name` AS `name`
+                    , !ISNULL(`val`.`id_elasticsearch_menu_category_values`) AS `choosen`
+
+                FROM `' . _DB_PREFIX_ . 'attribute` AS `attr`
+
+                LEFT JOIN `' . _DB_PREFIX_ . 'attribute_lang` AS `attr_lang`
+                ON  `attr_lang`.`id_attribute` = `attr`.`id_attribute`
+                AND `attr_lang`.`id_lang` = ' . (int) Context::getContext()->language->id . '
+
+                LEFT JOIN `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` AS `val`
+                ON  `val`.`type_id` = `attr`.`id_attribute_group`
+                AND `val`.`value` = `attr`.`id_attribute`
+                AND `val`.`type` = "attribute"
+
+                WHERE TRUE';
+
+        if ($id) {
+            $sql .= '
+                AND   `attr`.`id_attribute_group` = ' . (int) $id;
+        }
+
+        $sql .= '
+                ORDER BY `attr`.`position` ASC;';
+
+        return array_map(function ($row) {
+            $row['id'] = (int) $row['id'];
+            $row['choosen'] = (bool) $row['choosen'];
+
+            return $row;
+        }, DB::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql));
+    }
 }
