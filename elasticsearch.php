@@ -283,6 +283,7 @@ class ElasticSearch extends Module
             case 'manage_menu_filter_template':
                 $this->context->controller->addCSS(_ELASTICSEARCH_CSS_URI_.'template_management.css');
                 $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.'template_management.js');
+                $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_ . 'filter-data-selection.js');
                 $this->context->controller->addjqueryPlugin('sortable');
                 $this->displayMenuFilterTemplateManagement();
                 break;

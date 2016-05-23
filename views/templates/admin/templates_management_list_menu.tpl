@@ -280,6 +280,8 @@
 								{else}
 									<a
 										href="#"
+										data-toggle="modal"
+										data-target="#filter-values-modal"
 										data-id="{$attribute_group['id_attribute_group']}"
 										data-type="attribute"
 									>
@@ -345,6 +347,8 @@
 								{else}
 									<a
 										href="#"
+										data-toggle="modal"
+										data-target="#filter-values-modal"
 										data-id="{$feature['id_feature']}"
 										data-type="feature"
 									>
@@ -387,6 +391,24 @@
 			{/if}
 		</ul>
 	</section>
+	<div class="modal fade" id="filter-values-modal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+					<h4 class="modal-title"></h4>
+				</div>
+				<div class="modal-body">
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">{l s='Close'}</button>
+					<button class="btn btn-primary" type="button">{l s='Save'}</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </section>
 
 <script type="text/javascript">
