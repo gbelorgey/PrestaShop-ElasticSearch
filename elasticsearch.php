@@ -122,6 +122,22 @@ class ElasticSearch extends Module
               `date` datetime NOT NULL,
               PRIMARY KEY (`id_specific_price`, `id_product`, `id_shop`)
             ) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;
+        ') && DB::getInstance()->execute('
+            CREATE TABLE `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` (
+              `id_elasticsearch_menu_category_values` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+              `id_menu_category` INT(10) UNSIGNED NOT NULL,
+              `id_shop` INT(10) UNSIGNED NOT NULL,
+              `type` VARCHAR(50) NOT NULL,
+              `type_id` INT(10) UNSIGNED NOT NULL,
+              `value` INT(10) UNSIGNED NOT NULL,
+              `date_add` DATETIME NOT NULL,
+              `date_upd` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`id_elasticsearch_menu_category_values`),
+              UNIQUE KEY `values` (`id_menu_category`, `id_shop`, `type`, `type_id`, `value`)
+            )
+            ENGINE=' . _MYSQL_ENGINE_ . '
+            COMMENT="Liste des valeurs de facettes disponibles pour le menu"
+            DEFAULT CHARSET=utf8;
         ');
     }
 
@@ -211,7 +227,8 @@ class ElasticSearch extends Module
                 `'._DB_PREFIX_.'elasticsearch_template`,
                 `'._DB_PREFIX_.'elasticsearch_category`,
                 `'._DB_PREFIX_.'elasticsearch_manufacturer`,
-                `'._DB_PREFIX_.'elasticsearch_template_shop`
+                `' . _DB_PREFIX_ . 'elasticsearch_template_shop`,
+                `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
         ');
     }
 
@@ -266,8 +283,38 @@ class ElasticSearch extends Module
             case 'manage_menu_filter_template':
                 $this->context->controller->addCSS(_ELASTICSEARCH_CSS_URI_.'template_management.css');
                 $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_.'template_management.js');
+                $this->context->controller->addJS(_ELASTICSEARCH_JS_URI_ . 'filter-data-selection.js');
                 $this->context->controller->addjqueryPlugin('sortable');
                 $this->displayMenuFilterTemplateManagement();
+                break;
+            case 'manage_menu_filter_template_values':
+                require_once _ELASTICSEARCH_CLASSES_DIR_ . 'ElasticSearchMenuCategoryValues.php';
+                $result = array();
+                $method = '';
+                $params = array();
+
+                if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+                    $method = 'getAll' . ucfirst(Tools::getValue('filterType'));
+                    $params[] = (array) Tools::getValue('filterCategories');
+                    $params[] = (array) Tools::getValue('filterShops');
+                    $params[] = (array) Tools::getValue('filterTypeId');
+                }
+
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $method = 'set' . ucfirst(Tools::getValue('filterType'));
+                    $params[] = (array) Tools::getValue('filterCategories');
+                    $params[] = (array) Tools::getValue('filterShops');
+                    $params[] = (array) Tools::getValue('filterTypeId');
+                    $params[] = (array) Tools::getValue('filterValues');
+                }
+
+                if (method_exists('ElasticSearchMenuCategoryValues', $method)) {
+                    $result = call_user_func_array(['ElasticSearchMenuCategoryValues', $method], $params);
+                }
+
+                echo Tools::jsonEncode($result);
+                exit();
+
                 break;
             default:
                 $this->displayConfiguration();
@@ -524,7 +571,7 @@ class ElasticSearch extends Module
                 ');
             }
 
-            if (Tools::getValue('scope') == 1) {  
+            if (Tools::getValue('scope') == 1) {
                 Db::getInstance()->execute('TRUNCATE TABLE '._DB_PREFIX_.'elasticsearch_menu_template');
                 $categories = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
                     SELECT id_category
@@ -552,8 +599,8 @@ class ElasticSearch extends Module
             Db::getInstance()->execute('
                 DELETE FROM '._DB_PREFIX_.'elasticsearch_menu_template_shop
                 WHERE `id_elasticsearch_menu_template` = '.(int)$id_elasticsearch_menu_template);
-            
-           
+
+
             if (count($categoryBox)) {
                 $filter_values = array();
 
@@ -848,7 +895,7 @@ class ElasticSearch extends Module
             $this->html .= $this->renderErrors($search->errors);
         }
     }
-    
+
     private function indexCategories()
     {
             $search = $this->getSearchServiceObject();
@@ -1365,7 +1412,7 @@ class ElasticSearch extends Module
 
         return $result;
     }
-    
+
     public function getSearchFilter()
     {
         require_once(_ELASTICSEARCH_CLASSES_DIR_.'ElasticSearchFilter.php');

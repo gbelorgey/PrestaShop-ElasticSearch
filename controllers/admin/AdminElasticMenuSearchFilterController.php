@@ -99,6 +99,7 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
                 array(
                     'type' => 'checkbox',
                     'name' => 'categoryBox',
+                    'class' => 'js-filter-category',
                     'label' => $this->l('Categories used for this template'),
                     'required' => true,
                     'values' => array(
@@ -180,13 +181,28 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
         $features = ElasticMenuSearchTemplate::getFeatures();
         $module_instance = Module::getInstanceByName('elasticsearch');
 
+        $urlParts = array();
+        $params   = [
+            'controller',
+            'configure',
+            'token',
+        ];
+
+        foreach ($params as $param) {
+            $urlParts[] = $param . '=' . Tools::getValue($param);
+        }
+
+        $urlParts[] = 'menu=manage_menu_filter_template_values';
+
         $this->context->smarty->assign(array(
             'current_url' => $module_instance->module_url,
             'id_elasticsearch_menu_template' => 0,
             'attribute_groups' => $attribute_groups,
             'features' => $features,
-            'total_filters' => 6 + count($attribute_groups) + count($features)
+            'total_filters' => 6 + count($attribute_groups) + count($features),
+            'ajaxUrl' => '?' . implode('&', $urlParts),
         ));
+
         return $this->context->smarty->fetch(_ELASTICSEARCH_TEMPLATES_DIR_.'admin/templates_management_list_menu.tpl');
     }
 }

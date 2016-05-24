@@ -48,14 +48,14 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_subcategories_push_foward" id="elasticsearch_selection_subcategories_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-                                            </label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_subcategories_push_foward" id="elasticsearch_selection_subcategories_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
@@ -88,14 +88,14 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_stock_push_foward" id="elasticsearch_selection_stock_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-                                            </label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_stock_push_foward" id="elasticsearch_selection_stock_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
@@ -128,14 +128,14 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_condition_push_foward" id="elasticsearch_selection_condition_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-					</label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_condition_push_foward" id="elasticsearch_selection_condition_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
@@ -168,14 +168,14 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_manufacturer_push_foward" id="elasticsearch_selection_manufacturer_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-					</label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_manufacturer_push_foward" id="elasticsearch_selection_manufacturer_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
@@ -208,14 +208,14 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_weight_slider_push_foward" id="elasticsearch_selection_weight_slider_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-                                            </label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_weight_slider_push_foward" id="elasticsearch_selection_weight_slider_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
@@ -248,119 +248,178 @@
 				<div class="col-lg-3 pull-right">
 					<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
 					<div class="col-lg-6">
-                                            <label class="switch-light prestashop-switch fixed-width-lg">
-						<input name="elasticsearch_selection_price_slider_push_foward" id="elasticsearch_selection_price_slider_push_foward" type="checkbox" />
-						<span>
-							<span>{l s='Yes' mod='elasticsearch'}</span>
-							<span>{l s='No' mod='elasticsearch'}</span>
-						</span>
-						<a class="slide-button btn"></a>
-					</label>
+						<label class="switch-light prestashop-switch fixed-width-lg">
+							<input name="elasticsearch_selection_price_slider_push_foward" id="elasticsearch_selection_price_slider_push_foward" type="checkbox" />
+							<span>
+								<span>{l s='Yes' mod='elasticsearch'}</span>
+								<span>{l s='No' mod='elasticsearch'}</span>
+							</span>
+							<a class="slide-button btn"></a>
+						</label>
 					</div>
 				</div>
 			</li>
 			{if $attribute_groups|count > 0}
 				{foreach $attribute_groups as $attribute_group}
-				<li class="filter_list_item" draggable="true">
-					<div class="col-lg-2">
-						<label class="switch-light prestashop-switch fixed-width-lg">
-							<input name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}" id="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}" type="checkbox" />
-							<span>
-								<span>{l s='Yes' mod='elasticsearch'}</span>
-								<span>{l s='No' mod='elasticsearch'}</span>
-							</span>
-							<a class="slide-button btn"></a>
-						</label>
-					</div>
-					<div class="col-lg-4">
-						<span class="module_name">
-						{if $attribute_group['n'] > 1}
-							{l s='Attribute group: %1$s (%2$d attributes)'|sprintf:$attribute_group['name']:$attribute_group['n'] mod='elasticsearch'}
-						{else}
-							{l s='Attribute group: %1$s (%2$d attribute)'|sprintf:$attribute_group['name']:$attribute_group['n'] mod='elasticsearch'}
-						{/if}
-						{if $attribute_group['is_color_group']}
-							<img src="../img/admin/color_swatch.png" alt="" title="{l s='This group will allow user to select a color' mod='elasticsearch'}" />
-						{/if}
-						</span>
-					</div>
-					<div class="col-lg-3 pull-right">
-						<label class="control-label col-lg-6">{l s='Filter result limit:' mod='elasticsearch'}</label>
-						<div class="col-lg-6">
-							<select name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_filter_show_limit">
-								<option value="0">{l s='No limit' mod='elasticsearch'}</option>
-								<option value="4">4</option>
-								<option value="5">5</option>
-								<option value="10">10</option>
-								<option value="20">20</option>
-							</select>
-						</div>
-					</div>
-					<div class="col-lg-3 pull-right">
-						<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
-						<div class="col-lg-6">
+					<li class="filter_list_item" draggable="true">
+						<div class="col-lg-2">
 							<label class="switch-light prestashop-switch fixed-width-lg">
-							<input name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_push_foward" id="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_push_foward" type="checkbox" />
-							<span>
-								<span>{l s='Yes' mod='elasticsearch'}</span>
-								<span>{l s='No' mod='elasticsearch'}</span>
-							</span>
-							<a class="slide-button btn"></a>
-						</label>
+								<input name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}" id="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}" type="checkbox" />
+								<span>
+									<span>{l s='Yes' mod='elasticsearch'}</span>
+									<span>{l s='No' mod='elasticsearch'}</span>
+								</span>
+								<a class="slide-button btn"></a>
+							</label>
 						</div>
-					</div>
-				</li>
+						<div class="col-lg-4">
+							<span class="module_name">
+								{l s='Attribute group: %s'|sprintf:$attribute_group['name'] mod='elasticsearch'}
+								{if $attribute_group.n == 0}
+									({l s='no attribute' mod='elasticsearch'})
+								{else}
+									<a
+										href="#"
+										data-toggle="modal"
+										data-target="#filter-values-modal"
+										data-url="{$ajaxUrl}"
+										data-id="{$attribute_group['id_attribute_group']}"
+										data-type="attributes"
+										data-title="{l s='Attribute group: %s'|sprintf:$attribute_group['name'] mod='elasticsearch'}"
+									>
+										{if $attribute_group['n'] > 1}
+											({$attribute_group['n']}&nbsp;{l s='attributes' mod='elasticsearch'})
+										{else}
+											({$attribute_group['n']}&nbsp;{l s='attribute' mod='elasticsearch'})
+										{/if}
+									</a>
+								{/if}
+								{if $attribute_group['is_color_group']}
+									<img src="../img/admin/color_swatch.png" alt="" title="{l s='This group will allow user to select a color' mod='elasticsearch'}" />
+								{/if}
+							</span>
+						</div>
+						<div class="col-lg-3 pull-right">
+							<label class="control-label col-lg-6">{l s='Filter result limit:' mod='elasticsearch'}</label>
+							<div class="col-lg-6">
+								<select name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_filter_show_limit">
+									<option value="0">{l s='No limit' mod='elasticsearch'}</option>
+									<option value="4">4</option>
+									<option value="5">5</option>
+									<option value="10">10</option>
+									<option value="20">20</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-lg-3 pull-right">
+							<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
+							<div class="col-lg-6">
+								<label class="switch-light prestashop-switch fixed-width-lg">
+								<input name="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_push_foward" id="elasticsearch_selection_ag_{$attribute_group['id_attribute_group']|intval}_push_foward" type="checkbox" />
+								<span>
+									<span>{l s='Yes' mod='elasticsearch'}</span>
+									<span>{l s='No' mod='elasticsearch'}</span>
+								</span>
+								<a class="slide-button btn"></a>
+							</label>
+							</div>
+						</div>
+					</li>
 				{/foreach}
 			{/if}
 
 			{if $features|count > 0}
 				{foreach $features as $feature}
-				<li class="filter_list_item" draggable="true">
-					<div class="col-lg-2">
-						<label class="switch-light prestashop-switch fixed-width-lg">
-							<input name="elasticsearch_selection_feat_{$feature['id_feature']|intval}" id="elasticsearch_selection_feat_{$feature['id_feature']|intval}" type="checkbox" />
-							<span>
-								<span>{l s='Yes' mod='elasticsearch'}</span>
-								<span>{l s='No' mod='elasticsearch'}</span>
-							</span>
-							<a class="slide-button btn"></a>
-						</label>
-					</div>
-					<div class="col-lg-4">
-						<span class="module_name">
-					{if $feature['n'] > 1}{l s='Feature: %1$s (%2$d values)'|sprintf:$feature['name']:$feature['n'] mod='elasticsearch'}{else}{l s='Feature: %1$s (%2$d value)'|sprintf:$feature['name']:$feature['n'] mod='elasticsearch'}{/if}
-						</span>
-					</div>
-					<div class="col-lg-3 pull-right">
-						<label class="control-label col-lg-6">{l s='Filter result limit:' mod='elasticsearch'}</label>
-						<div class="col-lg-6">
-							<select name="elasticsearch_selection_feat_{$feature['id_feature']|intval}_filter_show_limit">
-								<option value="0">{l s='No limit' mod='elasticsearch'}</option>
-								<option value="4">4</option>
-								<option value="5">5</option>
-								<option value="10">10</option>
-								<option value="20">20</option>
-							</select>
+					<li class="filter_list_item" draggable="true">
+						<div class="col-lg-2">
+							<label class="switch-light prestashop-switch fixed-width-lg">
+								<input name="elasticsearch_selection_feat_{$feature['id_feature']|intval}" id="elasticsearch_selection_feat_{$feature['id_feature']|intval}" type="checkbox" />
+								<span>
+									<span>{l s='Yes' mod='elasticsearch'}</span>
+									<span>{l s='No' mod='elasticsearch'}</span>
+								</span>
+								<a class="slide-button btn"></a>
+							</label>
 						</div>
-					</div>
-					<div class="col-lg-3 pull-right">
-						<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
-						<div class="col-lg-6">
-                                                    <label class="switch-light prestashop-switch fixed-width-lg">
-							<input name="elasticsearch_selection_feat_{$feature['id_feature']|intval}_push_foward" id="elasticsearch_selection_feat_{$feature['id_feature']|intval}_push_foward" type="checkbox" />
-							<span>
-								<span>{l s='Yes' mod='elasticsearch'}</span>
-								<span>{l s='No' mod='elasticsearch'}</span>
+						<div class="col-lg-4">
+							<span class="module_name">
+								{l s='Feature: %s'|sprintf:$feature['name'] mod='elasticsearch'}
+								{if $feature.n == 0}
+									({l s='no value' mod='elasticsearch'})
+								{else}
+									<a
+										href="#"
+										data-toggle="modal"
+										data-target="#filter-values-modal"
+										data-url="{$ajaxUrl}"
+										data-id="{$feature['id_feature']}"
+										data-type="features"
+										data-title="{l s='Feature: %s'|sprintf:$feature['name'] mod='elasticsearch'}"
+									>
+										{if $feature['n'] > 1}
+											({$feature['n']}&nbsp;{l s='values' mod='elasticsearch'})
+										{else}
+											({$feature['n']}&nbsp;{l s='value' mod='elasticsearch'})
+										{/if}
+									</a>
+								{/if}
 							</span>
-							<a class="slide-button btn"></a>
-                                                    </label>
 						</div>
-					</div>
-				</li>
+						<div class="col-lg-3 pull-right">
+							<label class="control-label col-lg-6">{l s='Filter result limit:' mod='elasticsearch'}</label>
+							<div class="col-lg-6">
+								<select name="elasticsearch_selection_feat_{$feature['id_feature']|intval}_filter_show_limit">
+									<option value="0">{l s='No limit' mod='elasticsearch'}</option>
+									<option value="4">4</option>
+									<option value="5">5</option>
+									<option value="10">10</option>
+									<option value="20">20</option>
+								</select>
+							</div>
+						</div>
+						<div class="col-lg-3 pull-right">
+							<label class="control-label col-lg-6">{l s='Filter push foward:' mod='elasticsearch'}</label>
+							<div class="col-lg-6">
+								<label class="switch-light prestashop-switch fixed-width-lg">
+									<input name="elasticsearch_selection_feat_{$feature['id_feature']|intval}_push_foward" id="elasticsearch_selection_feat_{$feature['id_feature']|intval}_push_foward" type="checkbox" />
+									<span>
+										<span>{l s='Yes' mod='elasticsearch'}</span>
+										<span>{l s='No' mod='elasticsearch'}</span>
+									</span>
+									<a class="slide-button btn"></a>
+								</label>
+							</div>
+						</div>
+					</li>
 				{/foreach}
 			{/if}
 		</ul>
 	</section>
+	<div class="modal fade" id="filter-values-modal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+					<h4 class="modal-title"></h4>
+				</div>
+				<div class="modal-body">
+					<select
+						class="chosen-modal"
+						multiple
+						data-placeholder="{l s='Please, pick values you want to appear'}"
+					>
+						<option></option>
+					</select>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">{l s='Close'}</button>
+					<button class="btn btn-primary js-filter-values-save" type="button">{l s='Save'}</button>
+				</div>
+			</div>
+		</div>
+	</div>
 </section>
 
 <script type="text/javascript">
@@ -376,5 +435,4 @@
 		$('#shop-tree input[name="checkBoxShopAsso_elasticsearch_template['+elasticsearch_selected_shops[i]+']"]').attr('checked', 'checked');
 		$('#shop-tree input[name="checkBoxShopAsso_elasticsearch_template['+elasticsearch_selected_shops[i]+']"]').parent().addClass('tree-selected');
 	}
-
 </script>
