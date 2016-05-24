@@ -13,15 +13,20 @@
 
                 event.preventDefault();
 
-                $modal.modal('hide');
-
                 $.ajax({
                     url: data.url,
-                    data: $.extend({}, data, {
-                        values: $select.val(),
-                    }),
+                    data: {
+                        filterShops: data.shops,
+                        filterCategories: data.categories,
+                        filterType: data.type,
+                        filterTypeId: data.id,
+                        filterValues: $select.val(),
+                    },
                     type: 'post',
                     dataType: 'json',
+                    success: function () {
+                        $modal.modal('hide');
+                    },
                 });
             })
         ;

@@ -300,6 +300,14 @@ class ElasticSearch extends Module
                     $params[] = (array) Tools::getValue('filterTypeId');
                 }
 
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $method = 'set' . ucfirst(Tools::getValue('filterType'));
+                    $params[] = (array) Tools::getValue('filterCategories');
+                    $params[] = (array) Tools::getValue('filterShops');
+                    $params[] = (array) Tools::getValue('filterTypeId');
+                    $params[] = (array) Tools::getValue('filterValues');
+                }
+
                 if (method_exists('ElasticSearchMenuCategoryValues', $method)) {
                     $result = call_user_func_array(['ElasticSearchMenuCategoryValues', $method], $params);
                 }

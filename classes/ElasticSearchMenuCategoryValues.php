@@ -127,4 +127,102 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
             return $row;
         }, DB::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql));
     }
+
+    public static function deleteValues(array $categoriesId, array $shopsId, $type, array $typeId, array $ids)
+    {
+        $sql = 'DELETE
+
+                FROM `ps_elasticsearch_menu_category_values`
+
+                WHERE TRUE
+                AND   `id_menu_category` IN (' . implode(', ', array_map('intval', (array) $categoriesId)) . ')
+                AND   `id_shop` IN (' . implode(', ', array_map('intval', (array) $shopsId)) . ')
+                AND   `type` = "' . pSQL($type) . '"
+                AND   `type_id` IN (' . implode(', ', array_map('intval', (array) $typeId)) . ')
+                AND   `value` NOT IN (' . implode(', ', array_map('intval', (array) $ids)) . ');';
+
+        return Db::getInstance()->execute($sql);
+    }
+
+    public static function setAttributes(array $categoriesId, array $shopsId, array $typeId, array $ids)
+    {
+        if (!static::deleteValues($categoriesId, $shopsId, 'attribute', $typeId, $ids)) {
+            return false;
+        }
+
+        $sql = 'INSERT INTO `ps_elasticsearch_menu_category_values`
+                  (
+                      `id_menu_category`
+                    , `id_shop`
+                    , `type`
+                    , `type_id`
+                    , `value`
+                    , `date_add`
+                  )
+
+                SELECT
+                      `cat`.`id_category`
+                    , `shop`.`id_shop`
+                    , "attribute"
+                    , `attr`.`id_attribute_group`
+                    , `attr`.`id_attribute`
+                    , NOW()
+
+                FROM `ps_attribute` AS `attr`
+
+                JOIN `ps_category` AS `cat`
+
+                JOIN `ps_shop` AS `shop`
+
+                WHERE TRUE
+                AND   `attr`.`id_attribute_group` IN (' . implode(', ', array_map('intval', $typeId)) . ')
+                AND   `attr`.`id_attribute` IN (' . implode(', ', array_map('intval', $ids)) . ')
+                AND   `cat`.`id_category` IN (' . implode(', ', array_map('intval', $categoriesId)) . ')
+                AND   `shop`.`id_shop` IN (' . implode(', ', array_map('intval', $shopsId)) . ')
+
+                ON DUPLICATE KEY UPDATE `date_upd` = NOW();';
+
+        return DB::getInstance()->execute($sql);
+    }
+
+    public static function setFeatures(array $categoriesId, array $shopsId, array $typeId, array $ids)
+    {
+        if (!static::deleteValues($categoriesId, $shopsId, 'feature', $typeId, $ids)) {
+            return false;
+        }
+
+        $sql = 'INSERT INTO `ps_elasticsearch_menu_category_values`
+                  (
+                      `id_menu_category`
+                    , `id_shop`
+                    , `type`
+                    , `type_id`
+                    , `value`
+                    , `date_add`
+                  )
+
+                SELECT
+                      `cat`.`id_category`
+                    , `shop`.`id_shop`
+                    , "feature"
+                    , `fv`.`id_feature`
+                    , `fv`.`id_feature_value`
+                    , NOW()
+
+                FROM `ps_feature_value` AS `fv`
+
+                JOIN `ps_category` AS `cat`
+
+                JOIN `ps_shop` AS `shop`
+
+                WHERE TRUE
+                AND   `fv`.`id_feature` IN (' . implode(', ', array_map('intval', $typeId)) . ')
+                AND   `fv`.`id_feature_value` IN (' . implode(', ', array_map('intval', $ids)) . ')
+                AND   `cat`.`id_category` IN (' . implode(', ', array_map('intval', $categoriesId)) . ')
+                AND   `shop`.`id_shop` IN (' . implode(', ', array_map('intval', $shopsId)) . ')
+
+                ON DUPLICATE KEY UPDATE `date_upd` = NOW();';
+
+        return DB::getInstance()->execute($sql);
+    }
 }
