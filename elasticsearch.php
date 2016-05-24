@@ -290,10 +290,18 @@ class ElasticSearch extends Module
             case 'manage_menu_filter_template_values':
                 require_once _ELASTICSEARCH_CLASSES_DIR_ . 'ElasticSearchMenuCategoryValues.php';
                 $result = array();
-                $method = 'getAll' . ucfirst(Tools::getValue('filterType')) . 's';
+                $method = '';
+                $params = array();
+
+                if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+                    $method = 'getAll' . ucfirst(Tools::getValue('filterType'));
+                    $params[] = (array) Tools::getValue('filterCategories');
+                    $params[] = (array) Tools::getValue('filterShops');
+                    $params[] = (array) Tools::getValue('filterTypeId');
+                }
 
                 if (method_exists('ElasticSearchMenuCategoryValues', $method)) {
-                    $result = ElasticSearchMenuCategoryValues::$method(Tools::getValue('filterValue'));
+                    $result = call_user_func_array(['ElasticSearchMenuCategoryValues', $method], $params);
                 }
 
                 echo Tools::jsonEncode($result);

@@ -99,6 +99,7 @@ class AdminElasticMenuSearchFilterController extends ModuleAdminController
                 array(
                     'type' => 'checkbox',
                     'name' => 'categoryBox',
+                    'class' => 'js-filter-category',
                     'label' => $this->l('Categories used for this template'),
                     'required' => true,
                     'values' => array(

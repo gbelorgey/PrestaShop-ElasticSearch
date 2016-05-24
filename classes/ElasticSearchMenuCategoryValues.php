@@ -52,7 +52,7 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
         ),
     );
 
-    public static function getAllAttributes($id = 0)
+    public static function getAllAttributes(array $categoriesId, array $shopsId, array $typeId = array())
     {
         $sql = 'SELECT
                       `attr`.`id_attribute` AS `id`
@@ -68,13 +68,15 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
                 LEFT JOIN `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` AS `val`
                 ON  `val`.`type_id` = `attr`.`id_attribute_group`
                 AND `val`.`value` = `attr`.`id_attribute`
+                AND `val`.`id_menu_category` IN (' . implode(', ', array_map('intval', (array) $categoriesId)) . ')
+                AND `val`.`id_shop` IN (' . implode(', ', array_map('intval', (array) $shopsId)) . ')
                 AND `val`.`type` = "attribute"
 
                 WHERE TRUE';
 
-        if ($id) {
+        if ($typeId) {
             $sql .= '
-                AND   `attr`.`id_attribute_group` = ' . (int) $id;
+                AND   `attr`.`id_attribute_group` IN (' . implode(', ', array_map('intval', (array) $typeId)) . ')';
         }
 
         $sql .= '
@@ -88,7 +90,7 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
         }, DB::getInstance(_PS_USE_SQL_SLAVE_)->executeS($sql));
     }
 
-    public static function getAllFeatures($id = 0)
+    public static function getAllFeatures(array $categoriesId, array $shopsId, array $typeId = array())
     {
         $sql = 'SELECT
                       `fv`.`id_feature_value` AS `id`
@@ -104,13 +106,15 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
                 LEFT JOIN `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values` AS `val`
                 ON  `val`.`type_id` = `fv`.`id_feature`
                 AND `val`.`value` = `fv`.`id_feature_value`
+                AND `val`.`id_menu_category` IN (' . implode(', ', array_map('intval', (array) $categoriesId)) . ')
+                AND `val`.`id_shop` IN (' . implode(', ', array_map('intval', (array) $shopsId)) . ')
                 AND `val`.`type` = "feature"
 
                 WHERE TRUE';
 
-        if ($id) {
+        if ($typeId) {
             $sql .= '
-                AND   `fv`.`id_feature` = ' . (int) $id;
+                AND   `fv`.`id_feature` IN (' . implode(', ', array_map('intval', (array) $typeId)) . ')';
         }
 
         $sql .= '

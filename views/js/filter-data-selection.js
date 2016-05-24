@@ -29,7 +29,15 @@
         $modal
             .on('show.bs.modal', function (event) {
                 var $link = $(event.relatedTarget);
-                var data  = $link.data();
+                var data  = $.extend({}, $link.data(), {shops: [], categories: []});
+
+                $('.js-filter-category:checked').each(function () {
+                    data.categories.push($(this).attr('name').replace(/\D/g, ''));
+                });
+
+                $('[name^=checkBoxShopAsso_elasticsearch_menu_template]:checked').each(function () {
+                    data.shops.push($(this).val());
+                });
 
                 $title.text(data.title);
                 $select
@@ -40,11 +48,12 @@
                 $.ajax({
                     url: data.url,
                     data: {
-                        submitElasticSearchFilterChooseValues: true,
+                        filterShops: data.shops,
+                        filterCategories: data.categories,
                         filterType: data.type,
-                        filterValue: data.id,
-                        id_shop: data.shop,
+                        filterTypeId: data.id,
                     },
+                    type: 'get',
                     dataType: 'json',
                     success: function (json) {
                         json.forEach(function (elem) {

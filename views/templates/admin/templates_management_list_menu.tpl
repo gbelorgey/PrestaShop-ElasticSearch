@@ -282,10 +282,9 @@
 										href="#"
 										data-toggle="modal"
 										data-target="#filter-values-modal"
-										data-shop="{Context::getContext()->shop->id}"
 										data-url="{$ajaxUrl}"
 										data-id="{$attribute_group['id_attribute_group']}"
-										data-type="attribute"
+										data-type="attributes"
 										data-title="{l s='Attribute group: %s'|sprintf:$attribute_group['name'] mod='elasticsearch'}"
 									>
 										{if $attribute_group['n'] > 1}
@@ -352,10 +351,9 @@
 										href="#"
 										data-toggle="modal"
 										data-target="#filter-values-modal"
-										data-shop="{Context::getContext()->shop->id}"
 										data-url="{$ajaxUrl}"
 										data-id="{$feature['id_feature']}"
-										data-type="feature"
+										data-type="features"
 										data-title="{l s='Feature: %s'|sprintf:$feature['name'] mod='elasticsearch'}"
 									>
 										{if $feature['n'] > 1}
