@@ -132,7 +132,7 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
     {
         $sql = 'DELETE
 
-                FROM `ps_elasticsearch_menu_category_values`
+                FROM `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
 
                 WHERE TRUE
                 AND   `id_menu_category` IN (' . implode(', ', array_map('intval', (array) $categoriesId)) . ')
@@ -150,7 +150,7 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
             return false;
         }
 
-        $sql = 'INSERT INTO `ps_elasticsearch_menu_category_values`
+        $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
                   (
                       `id_menu_category`
                     , `id_shop`
@@ -168,11 +168,11 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
                     , `attr`.`id_attribute`
                     , NOW()
 
-                FROM `ps_attribute` AS `attr`
+                FROM `' . _DB_PREFIX_ . 'attribute` AS `attr`
 
-                JOIN `ps_category` AS `cat`
+                JOIN `' . _DB_PREFIX_ . 'category` AS `cat`
 
-                JOIN `ps_shop` AS `shop`
+                JOIN `' . _DB_PREFIX_ . 'shop` AS `shop`
 
                 WHERE TRUE
                 AND   `attr`.`id_attribute_group` IN (' . implode(', ', array_map('intval', $typeId)) . ')
@@ -191,7 +191,7 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
             return false;
         }
 
-        $sql = 'INSERT INTO `ps_elasticsearch_menu_category_values`
+        $sql = 'INSERT INTO `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
                   (
                       `id_menu_category`
                     , `id_shop`
@@ -209,11 +209,11 @@ class ElasticSearchMenuCategoryValues extends ObjectModel
                     , `fv`.`id_feature_value`
                     , NOW()
 
-                FROM `ps_feature_value` AS `fv`
+                FROM `' . _DB_PREFIX_ . 'feature_value` AS `fv`
 
-                JOIN `ps_category` AS `cat`
+                JOIN `' . _DB_PREFIX_ . 'category` AS `cat`
 
-                JOIN `ps_shop` AS `shop`
+                JOIN `' . _DB_PREFIX_ . 'shop` AS `shop`
 
                 WHERE TRUE
                 AND   `fv`.`id_feature` IN (' . implode(', ', array_map('intval', $typeId)) . ')
