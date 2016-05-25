@@ -65,15 +65,14 @@ class ElasticSearchService extends SearchService
 
     protected function initClient()
     {
-        if (!$this->host)
-        {
+        if (!$this->host) {
             $this->errors[] = $this->module_instance->l('Service host must be entered in order to use elastic search', self::FILENAME);
             return false;
         }
 
         $params = array();
         $params['hosts'] = array(
-            $this->host         				// Domain + Port
+            $this->host // Domain + Port
         );
 
         $this->client = new Elasticsearch\Client($params);
@@ -81,13 +80,16 @@ class ElasticSearchService extends SearchService
 
     public function testSearchServiceConnection()
     {
-        if (!$this->client || !$this->host)
+        if (!$this->client || !$this->host) {
             return false;
+        }
 
-        $response = Tools::jsonDecode(Tools::file_get_contents($this->host));
+        // Don't use the proxy.
+        $response = Tools::jsonDecode(file_get_contents($this->host, false));
 
-        if (!$response)
+        if (!$response) {
             return false;
+        }
 
         return isset($response->status) && $response->status = '200';
     }
