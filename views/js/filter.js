@@ -523,7 +523,7 @@ function reloadElasticsearchContent(params_plus, url_only)
     if (typeof(url_only) != 'undefined' && url_only) {
         ajax_call_data = params_plus + '&submitElasticsearchFilter=1&token=' + static_token;
     } else {
-        ajax_call_data = data + params_plus + n + '&submitElasticsearchFilter=1&token=' + static_token;
+        ajax_call_data = data + params_plus + n + '&submitElasticsearchFilter=1&id_shop=' + elasticsearch_id_shop + '&token=' + static_token;
     }
 
     ajaxQuery = $.ajax(

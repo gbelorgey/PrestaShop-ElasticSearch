@@ -27,4 +27,5 @@
 <script>
 	var elasticsearch_ajax_uri = '{$smarty.const._ELASTICSEARCH_AJAX_URI_|escape:'htmlall':'UTF-8'}';
 	var elasticsearch_min_words_count = '{Configuration::get('ELASTICSEARCH_SEARCH_MIN')|intval}';
+	var elasticsearch_id_shop = '{Context::getContext()->shop->id}';
 </script>
