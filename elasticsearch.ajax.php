@@ -18,6 +18,17 @@ if ($id_shop) {
 } else {
     die();
 }
+
+$id_lang = Tools::getValue('id_lang');
+if ($id_lang) {
+    $language = new Language((int)$id_lang);
+    Context::getContext()->language = $language;
+    Context::getContext()->cookie->id_lang = $language->id;
+    // This should be replace by a proper controller and url.
+    @include_once(_PS_THEME_DIR_.'lang/'.$language->iso_code.'.php');
+} else {
+    die();
+}
 /* End fix for multishop */
 
 if (Tools::getValue('token') != Tools::getToken(false)) {
