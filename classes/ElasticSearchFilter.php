@@ -1726,8 +1726,8 @@ class ElasticSearchFilter extends AbstractFilter
             return true;
         }
 
-        if (!array_key_exists($type, static::$allowedFilters)) {
-            static::$allowedFilters[ $type ] = array();
+        if (!array_key_exists($type.'_'.$typeId, static::$allowedFilters)) {
+            static::$allowedFilters[$type.'_'.$typeId] = array();
 
             $sql = 'SELECT `value`
                     FROM `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
@@ -1739,12 +1739,12 @@ class ElasticSearchFilter extends AbstractFilter
                     ;';
 
             foreach (Db::getInstance()->executeS($sql) as $row) {
-                static::$allowedFilters[ $type ][] = $row['value'];
+                static::$allowedFilters[$type.'_'.$typeId][] = $row['value'];
             }
         }
 
         // Si pas de config, on accpete tout, sinon on filtre
-        return !count(static::$allowedFilters[ $type ]) || in_array($id, static::$allowedFilters[ $type ]);
+        return !count(static::$allowedFilters[$type.'_'.$typeId]) || in_array($id, static::$allowedFilters[$type.'_'.$typeId]);
     }
 
     public function disallowFilter($type, $typeId, $id)
