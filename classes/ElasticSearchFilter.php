@@ -1722,6 +1722,10 @@ class ElasticSearchFilter extends AbstractFilter
 
     public function allowFilter($type, $typeId, $id)
     {
+        if ($this->entity != 'menu_category') {
+            return true;
+        }
+
         if (!array_key_exists($type, static::$allowedFilters)) {
             static::$allowedFilters[ $type ] = array();
 

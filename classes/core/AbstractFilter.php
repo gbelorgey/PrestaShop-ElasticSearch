@@ -32,6 +32,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
     public $hide_0_values;
     public $full_tree;
 
+    protected $entity;
     protected $filters_products_counts;
 
     private $filters;
@@ -54,6 +55,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
      */
     public function generateFiltersBlock($id_entity, $entity = 'category', array $extra_filters = array())
     {
+        $this->entity = $entity;
         $this->enabled_filters = $this->getEnabledFilters($id_entity, $entity);
         $filters = array();
         foreach ($this->enabled_filters as $type => $enabled_filter) {
@@ -347,6 +349,7 @@ abstract class AbstractFilter extends Brad\AbstractLogger
 
     public function generateFilters($id_entity, $entity = 'category', array $extra_filters = array())
     {
+        $this->entity = $entity;
         $this->enabled_filters = $this->getEnabledFilters($id_entity, $entity);
         $filters = array();
         foreach ($this->enabled_filters as $type => $enabled_filter) {
