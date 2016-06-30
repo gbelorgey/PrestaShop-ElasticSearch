@@ -31,10 +31,6 @@ if ($id_lang) {
 }
 /* End fix for multishop */
 
-if (Tools::getValue('token') != Tools::getToken(false)) {
-    exit;
-}
-
 if (Tools::isSubmit('submitElasticsearchSearch')) {
     $module_instance = Module::getInstanceByName('elasticsearch');
     $result = $module_instance->submitSearchQuery();

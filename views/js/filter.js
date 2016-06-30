@@ -521,9 +521,9 @@ function reloadElasticsearchContent(params_plus, url_only)
     var ajax_call_data;
 
     if (typeof(url_only) != 'undefined' && url_only) {
-        ajax_call_data = params_plus + '&submitElasticsearchFilter=1&token=' + static_token;
+        ajax_call_data = params_plus + '&submitElasticsearchFilter=1';
     } else {
-        ajax_call_data = data + params_plus + n + '&submitElasticsearchFilter=1&token=' + static_token;
+        ajax_call_data = data + params_plus + n + '&submitElasticsearchFilter=1';
     }
 
     ajaxQuery = $.ajax(
