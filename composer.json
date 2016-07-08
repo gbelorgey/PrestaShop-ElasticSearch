@@ -1,6 +1,13 @@
 {
-  "require": {
-    "monolog/monolog": "1.*",
-    "elasticsearch/elasticsearch": "~1.0"
-  }
+    "name": "antilop/prestashop-elasticsearch",
+    "type": "prestashop-module",
+    "require": {
+        "composer/installers": "~1.0"
+    },
+    "authors": [
+        {
+            "name": "Gregoire Belorgey",
+            "email": "gregoire@antilop.fr"
+        }
+    ]
 }
