@@ -69,6 +69,14 @@ class AdminElasticSearchFilterController extends ModuleAdminController
                     'ELASTICSEARCH_PRICE_USETAX' => array(
                         'type' => 'bool',
                         'title' => $this->l('Use tax to filter price')
+                    ),
+                    'ELASTICSEARCH_SHOW_INSTOCK_FIRST' => array(
+                        'type' => 'bool',
+                        'title' => $this->l('Display out of stock products last')
+                    ),
+                    'ELASTICSEARCH_DISPLAY_CATEGORIES_SAME_LEVEL' => array(
+                        'type' => 'bool',
+                        'title' => $this->l('Show category tree of same level')
                     )
                 ),
                 'submit' => array('title' => $this->l('Save'))
@@ -80,9 +88,15 @@ class AdminElasticSearchFilterController extends ModuleAdminController
     {
         $categories = Category::getRootCategories((int)$this->context->language->id);
         $id_root = (int)$categories[0]['id_category'];
+        $root_category = Shop::getContext() == Shop::CONTEXT_SHOP ? new Category((int)$this->context->shop->id_category) : new Category((int)$id_root);
 
-        $root_category = Shop::getContext() == Shop::CONTEXT_SHOP && Tools::isSubmit('id_shop') ? new Category((int)$this->context->shop->id_category) :
-            new Category((int)$id_root);
+        $manufacturers = Manufacturer::getManufacturers();
+        $manufacturers = array_map(function($m) {
+            return array(
+                'id_manufacturer' => $m['id_manufacturer'],
+                'name' => $m['name']
+            );
+        }, $manufacturers);
 
         $this->object = new ElasticSearchTemplate();
 
@@ -111,6 +125,17 @@ class AdminElasticSearchFilterController extends ModuleAdminController
                         'use_search' => false,
                         'use_checkbox' => true
                     ),
+                ),
+                array(
+                    'type' => 'checkbox',
+                    'name' => 'manufacturerBox',
+                    'label' => $this->l(' Manufacturers used for this template'),
+                    'required' => true,
+                    'values' => array(
+                        'id' => 'id_manufacturer',
+                        'name' => 'name',
+                        'query' => $manufacturers
+                    )
                 )
             ),
             'submit' => array(
@@ -118,8 +143,7 @@ class AdminElasticSearchFilterController extends ModuleAdminController
             )
         );
 
-        if (Shop::isFeatureActive())
-        {
+        if (Shop::isFeatureActive()) {
             $this->fields_form['input'][] = array(
                 'type' => 'shop',
                 'label' => $this->l('Shop association'),
@@ -135,15 +159,17 @@ class AdminElasticSearchFilterController extends ModuleAdminController
             'name' => 'templateSettingsManagement'
         );
 
+        foreach ($this->getSelectedManufacturers() as $id_manufacturer) {
+            $this->fields_value['manufacturerBox_'.$id_manufacturer] = true;
+        }
         $this->fields_value['templateSettingsManagement'] = $this->displayFilterTemplateManagemetList();
     }
 
-    private function getSelectedCategories()
+    protected function getSelectedCategories()
     {
         $elasticsearch_template = new ElasticSearchTemplate((int)Tools::getValue('id_elasticsearch_template'));
 
-        if (!Validate::isLoadedObject($elasticsearch_template))
-        {
+        if (!Validate::isLoadedObject($elasticsearch_template)) {
             $this->fields_value['elasticsearch_tpl_name'] = sprintf($this->l('My template %s'), date('Y-m-d'));
             $this->context->smarty->assign('elasticsearch_selected_shops', '');
             return array();
@@ -156,8 +182,9 @@ class AdminElasticSearchFilterController extends ModuleAdminController
         $return = $filters['categories'];
         $elasticsearch_selected_shops = '';
 
-        foreach ($filters['shop_list'] as $id_shop)
+        foreach ($filters['shop_list'] as $id_shop) {
             $elasticsearch_selected_shops .= $id_shop.', ';
+        }
 
         $elasticsearch_selected_shops = Tools::substr($elasticsearch_selected_shops, 0, -2);
 
@@ -171,7 +198,17 @@ class AdminElasticSearchFilterController extends ModuleAdminController
         return $return;
     }
 
-    private function displayFilterTemplateManagemetList()
+    protected function getSelectedManufacturers()
+    {
+        $elasticsearch_template = new ElasticSearchTemplate((int)Tools::getValue('id_elasticsearch_template'));
+        if (!Validate::isLoadedObject($elasticsearch_template)) {
+            return array();
+        }
+        $filters = unserialize($elasticsearch_template->filters);
+        return $filters['manufacturers'];
+    }
+
+    protected function displayFilterTemplateManagemetList()
     {
         $attribute_groups = ElasticSearchTemplate::getAttributes();
         $features = ElasticSearchTemplate::getFeatures();

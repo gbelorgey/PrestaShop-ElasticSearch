@@ -40,9 +40,12 @@ abstract class SearchService extends Brad\AbstractLogger
      * @param int $type - which instance to use
      * @return null|object
      */
-    public static function getInstance($type)
+    public static function getInstance($type, $id_shop = null)
     {
-        if (!isset(self::$instance[$type]))
+        if (is_null($id_shop)) {
+            $id_shop = Context::getContext()->shop->id;
+        }
+        if (!isset(self::$instance[$type]) || !isset(self::$instance[$type][$id_shop]))
         {
             $class = self::getClass($type);
 
@@ -55,10 +58,13 @@ abstract class SearchService extends Brad\AbstractLogger
             if (!class_exists($class.'.php'))
                 require_once(_ELASTICSEARCH_CLASSES_DIR_.$class.'.php');
 
-            self::$instance[$type] = new $class();
+            if (!isset(self::$instance[$type])) {
+                self::$instance[$type] = array();
+            }
+            self::$instance[$type][$id_shop] = new $class($id_shop);
         }
 
-        return self::$instance[$type];
+        return self::$instance[$type][$id_shop];
     }
 
     /**
@@ -82,19 +88,23 @@ abstract class SearchService extends Brad\AbstractLogger
     /**
      * Initialize index name which can be accessed as $this->index
      */
-    protected function initIndex()
+    protected function initIndex($id_shop = null, $force = false)
     {
-        $this->initIndexPrefix();
+        if (is_null($id_shop)) {
+            $id_shop = Context::getContext()->shop->id;
+        }
+        $this->initIndexPrefix($id_shop, $force);
 
-        if (!$this->index)
-            $this->index = $this->index_prefix.Context::getContext()->shop->id;
+        if (!$this->index || $force) {
+            $this->index = $this->index_prefix.$id_shop;
+        }
     }
 
     abstract protected function initClient();
 
     abstract public function testSearchServiceConnection();
 
-    abstract protected function initIndexPrefix();
+    abstract protected function initIndexPrefix($id_shop);
 
     abstract public function getDocumentById($type, $id);
 

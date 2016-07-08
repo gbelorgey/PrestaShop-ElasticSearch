@@ -8,15 +8,18 @@ class ElasticSearchFilter extends AbstractFilter
 
     public static $cache = array();
     public $id_category;
+    public $id_manufacturer;
     public $all_category_products = array();
     public $price_filter = array();
     public $weight_filter = array();
     private $selected_filters;
+    protected static $allowedFilters = array();
 
     public function __construct()
     {
         parent::__construct(SearchService::ELASTICSEARCH_INSTANCE);
         $this->id_category = (int)Tools::getValue('id_category', Tools::getValue('id_elasticsearch_category'));
+        $this->id_manufacturer = (int)Tools::getValue('id_manufacturer', Tools::getValue('id_elasticsearch_manufacturer'));
     }
 
     public function getFiltersProductsCountsAggregationQuery($enabled_filters)
@@ -51,6 +54,14 @@ class ElasticSearchFilter extends AbstractFilter
                         'field' => 'price_max_'.$id_currency,
                         'alias' => 'price_max_'.$id_currency,
                         'filter' => $price_query
+                    );
+                    break;
+                case self::FILTER_TYPE_DISCOUNT:
+                    $required_filters[] = array(
+                        'aggregation_type' => 'terms',
+                        'field' => 'discount_'.$id_currency,
+                        'alias' => 'discount_'.$id_currency,
+                        'filter' => $this->getProductsQueryByFilters($selected_filters, $type)
                     );
                     break;
                 case self::FILTER_TYPE_WEIGHT:
@@ -239,6 +250,11 @@ class ElasticSearchFilter extends AbstractFilter
 
         $pagination = (int)Tools::getValue('n');
         $start = ($page - 1) * $pagination;
+
+        if (empty($pagination)) {
+            $pagination = $this->getProductsBySelectedFilters($selected_filters, true);
+        }
+
         $order_by_values = array(0 => 'name', 1 => 'price', 6 => 'quantity', 7 => 'reference');
         $order_way_values = array(0 => 'asc', 1 => 'desc');
 
@@ -267,6 +283,10 @@ class ElasticSearchFilter extends AbstractFilter
         if ($order_by == 'name') {
             $order_by .= '_'.(int)Context::getContext()->language->id;
         }
+        if (is_null($order_by) && $this->id_category) {
+            $order_by = 'position_'.$this->id_category;
+            $order_way = 'asc';
+        }
 
         $required_fields = array(
             'out_of_stock',
@@ -285,7 +305,9 @@ class ElasticSearchFilter extends AbstractFilter
             'show_price',
             'price',
             'quantity',
-            'id_combination_default'
+            'id_combination_default',
+            'manufacturer_name',
+            'in_stock_when_global_oos_deny_orders'
         );
 
         $partial_fields = $this->getPartialFields($required_fields);
@@ -306,11 +328,32 @@ class ElasticSearchFilter extends AbstractFilter
 
         $global_allow_oosp = (int)Configuration::get('PS_ORDER_OUT_OF_STOCK');
 
+
         foreach ($products as $product) {
             $allow_oosp = $this->extractProductField($product, 'out_of_stock');
             $allow_oosp =
                 $allow_oosp == AbstractFilter::PRODUCT_OOS_ALLOW_ORDERS ||
                 ($allow_oosp == AbstractFilter::PRODUCT_OOS_USE_GLOBAL && $global_allow_oosp);
+
+            $price = Product::getPriceStatic(
+                $product['_id'],
+                true,
+                null,
+                2
+            );
+            $price_without_reduction = Product::getPriceStatic(
+                $product['_id'],
+                true,
+                null,
+                2,
+                null,
+                false,
+                false
+            );
+            $reduction_display = 0;
+            if ($price_without_reduction > $price) {
+                $reduction_display = round((1 - $price/$price_without_reduction) * 100);
+            }
 
             $products_data[] = array(
                 'id_product' => $product['_id'],
@@ -333,13 +376,16 @@ class ElasticSearchFilter extends AbstractFilter
                 'show_price' => $this->extractProductField($product, 'show_price'),
                 'quantity' => $this->extractProductField($product, 'quantity'),
                 'id_product_attribute' => $this->extractProductField($product, 'id_combination_default'),
-                'price' => $this->extractProductField($product, 'price'),
+                'price' => $price,
                 'price_tax_exc' => $this->extractProductField($product, 'price'),
+                'price_without_reduction' => $price_without_reduction,
+                'reduction_display' => $reduction_display,
                 'allow_oosp' => $allow_oosp,
-                'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id)
+                'link' => $this->extractProductField($product, 'link_'.Context::getContext()->language->id),
+                'manufacturer_name' => $this->extractProductField($product, 'manufacturer_name'),
+                'instock' => $this->extractProductField($product, 'in_stock_when_global_oos_deny_orders')
             );
         }
-
         return $products_data;
     }
 
@@ -475,6 +521,14 @@ class ElasticSearchFilter extends AbstractFilter
 
                         $price_counter++;
                         break;
+
+                    case 'discount':
+                        $search_values['discount'][] = array(
+                            'term' => array(
+                                'discount' => $value
+                            )
+                        );
+                        break;
                 }
             }
         }
@@ -482,7 +536,7 @@ class ElasticSearchFilter extends AbstractFilter
         $query['bool']['must'] = $this->getQueryFromSearchValues($search_values);
 
         //completing categories query
-        $query['bool']['must'][] = $this->getCurrentCategoryQuery();
+        $query['bool']['must'][] = $this->getCurrentControllerQuery();
 
         return $query;
     }
@@ -492,37 +546,47 @@ class ElasticSearchFilter extends AbstractFilter
      * subcategories in query too.
      * @return array query for category/ies
      */
-    public function getCurrentCategoryQuery()
+    public function getCurrentControllerQuery()
     {
-        if (!$this->full_tree) {
-            return array(
-                'term' => array(
-                    'categories' => $this->id_category
-                )
-            );
-        }
-
-        $subcategories = $this->getSubcategories(true);
-
-        if ($subcategories) {
-            $query = array(
-                'bool' => array(
-                    'should' => array()
-                )
-            );
-
-            foreach ($subcategories as $subcategory) {
-                $query['bool']['should'][] = array(
+        if ($this->id_category) {
+            if (!$this->full_tree) {
+                return array(
                     'term' => array(
-                        'categories' => $subcategory['id_category']
+                        'categories' => $this->id_category
+
                     )
                 );
             }
+            $subcategories = $this->getSubcategories(true);
 
-        } else {
+            if ($subcategories) {
+                $query = array(
+                    'bool' => array(
+                        'should' => array()
+                    )
+                );
+
+                foreach ($subcategories as $subcategory) {
+                    $query['bool']['should'][] = array(
+                        'term' => array(
+                            'categories' => $subcategory['id_category']
+                        )
+                    );
+                }
+
+            } else {
+                $query = array(
+                    'term' => array(
+                        'categories' => $this->id_category
+                    )
+                );
+            }
+        }
+
+        if ($this->id_manufacturer) {
             $query = array(
                 'term' => array(
-                    'categories' => $this->id_category
+                    'id_manufacturer' => $this->id_manufacturer
                 )
             );
         }
@@ -538,14 +602,47 @@ class ElasticSearchFilter extends AbstractFilter
     public function getQueryFromSearchValues(array $search_values)
     {
         $query = array();
-
+        $should_query = array();
         foreach ($search_values as $key => $value) {
-            if (in_array($key, array('categories', 'condition', 'manufacturer', 'in_stock', 'id_feature', 'id_attribute_group'))) {
+            if (in_array($key, array('categories', 'condition', 'manufacturer', 'in_stock', 'id_attribute_group'))) {
                 $query[] = array(
                     'bool' => array(
                         'should' => $value
                     )
                 );
+            } elseif ($key == 'id_feature') {
+                $features = array();
+                foreach ($value as $val) {
+                    $term = array_keys($val['term'])[0];
+                    if (!isset($features[$term])) {
+                        $features[$term] = array();
+                    }
+                    $features[$term][] = $val['term'][$term];
+                }
+
+                foreach ($features as $term => $values) {
+                    if (count($values) > 1) {
+                        $query[] = array(
+                            'bool' => array(
+                                'should' => array(
+                                    'terms' => array(
+                                        $term => $values
+                                    )
+                                )
+                            )
+                        );
+                    } else {
+                        $query[] = array(
+                            'bool' => array(
+                                'should' => array(
+                                    'term' => array(
+                                        $term => $values[0]
+                                    )
+                                )
+                            )
+                        );
+                    }
+                }
             } elseif ($key == 'weight') {
                 $query[] = array(
                     'range' => array(
@@ -619,6 +716,20 @@ class ElasticSearchFilter extends AbstractFilter
                         )
                     )
                 );
+            } elseif ($key == 'discount') {
+                $tmp = array();
+                foreach ($value as $v) {
+                    $tmp[] = array(
+                        'term' => array(
+                            'discount_'.(int)Context::getContext()->currency->id => $v['term']['discount']
+                        )
+                    );
+                }
+                $query[] = array(
+                    'bool' => array(
+                        'should' => $tmp
+                    )
+                );
             }
         }
 
@@ -626,21 +737,21 @@ class ElasticSearchFilter extends AbstractFilter
     }
 
     /**
-     * @param $id_category int category ID
+     * @param $id_entity int entity ID
+     * @param $entity string entity
      * @return array enabled filters for given category
      */
-    public function getEnabledFiltersByCategory($id_category)
+    public function getEnabledFilters($id_entity, $entity = 'category')
     {
         try {
             $filters = Db::getInstance(_PS_USE_SQL_SLAVE_)->query(
                 'SELECT `id_value`, `type`, `position`, `filter_type`, `filter_show_limit`
-                FROM `'._DB_PREFIX_.'elasticsearch_category`
-                WHERE `id_category` = "'.(int)$id_category.'"
+                FROM `'._DB_PREFIX_.'elasticsearch_'.pSQL($entity).'`
+                WHERE `id_'.pSQL($entity).'` = '.(int)$id_entity.'
                     AND `id_shop` = "'.(int)Context::getContext()->shop->id.'"
                 GROUP BY `type`, `id_value`
                 ORDER BY `position` ASC'
             );
-
             $formatted_filters = array();
 
             while ($row = Db::getInstance()->nextRow($filters)) {
@@ -654,7 +765,7 @@ class ElasticSearchFilter extends AbstractFilter
 
             return $formatted_filters;
         } catch (Exception $e) {
-            self::log('Unable to get filters from database', array('id_category' => $id_category));
+            self::log('Unable to get filters from database', array('id_category' => $id_entity));
             return array();
         }
     }
@@ -665,18 +776,13 @@ class ElasticSearchFilter extends AbstractFilter
     public function getSelectedFilters()
     {
         if ($this->selected_filters === null) {
-            $id_category = $this->id_category;
-
-            if ($id_category == Configuration::get('PS_HOME_CATEGORY') || !$id_category) {
-                return null;
-            }
-
             /* Analyze all the filters selected by the user and store them into a tab */
             $selected_filters = array(
                 'category' => array(),
                 'manufacturer' => array(),
                 'quantity' => array(),
-                'condition' => array()
+                'condition' => array(),
+                'discount' => array()
             );
 
             foreach ($_GET as $key => $value) {
@@ -696,35 +802,41 @@ class ElasticSearchFilter extends AbstractFilter
                             $id_key = $tmp_tab[1];
                         }
 
-                        if ($res[1] == 'condition' && in_array($value, array('new', 'used', 'refurbished'))) {
-                            $selected_filters['condition'][] = $value;
-                        } else {
-                            if ($res[1] == 'quantity' && (!$value || $value == 1)) {
-                                $selected_filters['quantity'][] = $value;
-                            } else {
-                                if (in_array($res[1], array('category', 'manufacturer'))) {
-                                    if (!isset($selected_filters[$res[1].($id_key ? '_'.$id_key : '')])) {
-                                        $selected_filters[$res[1].($id_key ? '_'.$id_key : '')] = array();
-                                    }
-
-                                    $selected_filters[$res[1].($id_key ? '_'.$id_key : '')][] = (int)$value;
-                                } else {
-                                    if (in_array($res[1], array('id_attribute_group', 'id_feature'))) {
-                                        if (!isset($selected_filters[$res[1]])) {
-                                            $selected_filters[$res[1]] = array();
-                                        }
-                                        $selected_filters[$res[1]][(int)$value] = $id_key.'_'.(int)$value;
-                                    } else {
-                                        if ($res[1] == 'weight') {
-                                            $selected_filters[$res[1]] = $tmp_tab;
-                                        } else {
-                                            if ($res[1] == 'price') {
-                                                $selected_filters[$res[1]] = $tmp_tab;
-                                            }
-                                        }
-                                    }
+                        switch ($res[1]) {
+                            case self::FILTER_TYPE_DISCOUNT:
+                                $selected_filters['discount'][] = $value;
+                                break;
+                            case self::FILTER_TYPE_CONDITION:
+                                if (in_array($value, array('new', 'used', 'refurbished'))) {
+                                    $selected_filters['condition'][] = $value;
                                 }
-                            }
+                                break;
+                            case self::FILTER_TYPE_QUANTITY:
+                                if (!$value || $value == 1) {
+                                    $selected_filters['quantity'][] = $value;
+                                }
+                                break;
+                            case self::FILTER_TYPE_CATEGORY:
+                            case self::FILTER_TYPE_MANUFACTURER:
+                                if (!isset($selected_filters[$res[1].($id_key ? '_'.$id_key : '')])) {
+                                    $selected_filters[$res[1].($id_key ? '_'.$id_key : '')] = array();
+                                }
+
+                                $selected_filters[$res[1].($id_key ? '_'.$id_key : '')][] = (int)$value;
+                                break;
+                            case self::FILTER_TYPE_ATTRIBUTE_GROUP:
+                            case self::FILTER_TYPE_FEATURE:
+                                if (!isset($selected_filters[$res[1]])) {
+                                    $selected_filters[$res[1]] = array();
+                                }
+                                $selected_filters[$res[1]][(int)$value] = $id_key.'_'.(int)$value;
+                                break;
+                            case self::FILTER_TYPE_WEIGHT:
+                                $selected_filters[$res[1]] = $tmp_tab;
+                                break;
+                            case self::FILTER_TYPE_PRICE:
+                                $selected_filters[$res[1]] = $tmp_tab;
+                                break;
                         }
                     }
                 }
@@ -824,6 +936,52 @@ class ElasticSearchFilter extends AbstractFilter
         }
 
         return null;
+    }
+
+    /**
+     * @param array $filter
+     * @return array discount filter data to be used in template
+     */
+    protected function getDiscountFilter($filter)
+    {
+        if (isset($filter[0])) {
+            $filter = $filter[0];
+        }
+
+        $currency = Context::getContext()->currency;
+
+        $discount_filter = array(
+            'type_lite' => self::FILTER_TYPE_DISCOUNT,
+            'type' => self::FILTER_TYPE_DISCOUNT,
+            'id_key' => 0,
+            'name' => $this->getModuleInstance()->l('Discount', self::FILENAME),
+            'values' => array(),
+            'filter_show_limit' => $filter['filter_show_limit'],
+            'filter_type' => $filter['filter_type'],
+            'position' => $filter['position']
+        );
+
+        $aggregation = $this->getAggregation(self::FILTER_TYPE_DISCOUNT.'_'.$currency->id);
+        if (!$aggregation) {
+            return $discount_filter;
+        }
+        ksort($aggregation);
+
+        $selected_filters = $this->getSelectedFilters();
+        $discount_array = array();
+
+        foreach ($aggregation as $value => $nbr) {
+            $discount_array[$value] = array(
+                'name' => $value.'%',
+                'nbr' => $nbr
+            );
+            if (isset($selected_filters['discount']) && in_array($value, $selected_filters['discount'])) {
+                $discount_array[$value]['checked'] = true;
+            }
+        }
+        $discount_filter['values'] = $discount_array;
+
+        return $discount_filter;
     }
 
     /**
@@ -1035,8 +1193,9 @@ class ElasticSearchFilter extends AbstractFilter
         $selected_filters = $this->getSelectedFilters();
         $manufacturers = $this->getAggregation('id_manufacturer');
 
-        if (!$manufacturers)
+        if (!$manufacturers) {
             return array();
+        }
 
         $manufacturers_with_names = $this->getModuleInstance()->getObjectsNamesByIds(
             array_keys($manufacturers),
@@ -1061,6 +1220,13 @@ class ElasticSearchFilter extends AbstractFilter
                 $manufacturers_values[$id_manufacturer]['checked'] = true;
             }
         }
+
+        uasort($manufacturers_values, function ($a, $b) {
+            if ($a['name'] == $b['name']) {
+                return 0;
+            }
+            return ($a['name'] < $b['name']) ? -1 : 1;
+        });
 
         return array(
             'type_lite' => self::FILTER_TYPE_MANUFACTURER,
@@ -1104,11 +1270,16 @@ class ElasticSearchFilter extends AbstractFilter
 
             $aggregation = $this->getAggregation('attribute_group_'.$id_attribute_group);
 
-            if (!$aggregation)
+            if (!$aggregation) {
                 continue;
+            }
 
             foreach ($aggregation as $id_attribute => $nbr) {
                 if ($nbr == 0 && $this->hide_0_values) {
+                    continue;
+                }
+
+                if ($this->disallowFilter('attribute', $id_attribute_group, $id_attribute)) {
                     continue;
                 }
 
@@ -1186,7 +1357,9 @@ class ElasticSearchFilter extends AbstractFilter
         $feature_array = array();
 
         $features_names = array();
+        $features_values = array();
         $features_values_names = array();
+        $features_values_positions = array();
 
         foreach ($filter as $id_feature => $feature_filter) {
             $hide_filter = true;
@@ -1204,22 +1377,27 @@ class ElasticSearchFilter extends AbstractFilter
             );
 
             $aggregation = $this->getAggregation('feature_'.$id_feature);
-
-            if (!$aggregation)
+            if (!$aggregation) {
                 continue;
+            }
 
             foreach ($aggregation as $id_feature_value => $nbr) {
                 if ($nbr == 0 && $this->hide_0_values) {
                     continue;
                 }
 
+                if ($this->disallowFilter('feature', $id_feature, $id_feature_value)) {
+                    continue;
+                }
+
                 $hide_filter = false;
 
-                $features_values_names[] = $id_feature_value;
+                $features_values[] = $id_feature_value;
 
                 $feature_array[$id_feature]['values'][$id_feature_value] = array(
                     'nbr' => (int)$nbr,
-                    'name' => ''
+                    'name' => '',
+                    'position' => 0
                 );
 
                 if (!empty($selected_filters[self::FILTER_TYPE_FEATURE])
@@ -1242,10 +1420,16 @@ class ElasticSearchFilter extends AbstractFilter
             'id_feature'
         );
         $features_values_names = $this->getModuleInstance()->getObjectsNamesByIds(
-            $features_values_names,
+            $features_values,
             'feature_value_lang',
             'id_feature_value',
             'value'
+        );
+        $features_values_positions = $this->getModuleInstance()->getObjectsPositionsByIds(
+            $features_values,
+            'feature_value',
+            'id_feature_value',
+            'position'
         );
 
         //adding names to values
@@ -1256,8 +1440,18 @@ class ElasticSearchFilter extends AbstractFilter
                 $fields['name'] = isset($features_values_names[$id_feature_value])
                     ? $features_values_names[$id_feature_value]
                     : '';
+                $fields['position'] = isset($features_values_positions[$id_feature_value])
+                    ? $features_values_positions[$id_feature_value]
+                    : '';
             }
+            uasort($feature['values'], function ($a, $b) {
+                if ($a['position'] == $b['position']) {
+                    return 0;
+                }
+                return ($a['position'] < $b['position']) ? -1 : 1;
+            });
         }
+
 
         return $feature_array;
     }
@@ -1274,8 +1468,9 @@ class ElasticSearchFilter extends AbstractFilter
 
         $aggregation = $this->getAggregation('categories');
 
-        if (empty($aggregation))
+        if (empty($aggregation)) {
             return array();
+        }
 
         $subcategories = $this->getSubcategories();
 
@@ -1309,8 +1504,9 @@ class ElasticSearchFilter extends AbstractFilter
         }
 
         // If there are no categories to display - return empty array
-        if ($this->hide_0_values && !$categories_with_products_count)
+        if ($this->hide_0_values && !$categories_with_products_count) {
             return array();
+        }
 
         $category_filter = array(
             'type_lite' => 'category',
@@ -1345,7 +1541,7 @@ class ElasticSearchFilter extends AbstractFilter
                     $this->id_category,
                     Context::getContext()->language->id,
                     true,
-                    isset($groups) ? $groups : null
+                    isset($groups) && count($groups) > 0 ? $groups : null
                 );
 
                 if (isset($categories[$this->id_category]) && !empty($categories[$this->id_category]['children'])) {
@@ -1426,7 +1622,6 @@ class ElasticSearchFilter extends AbstractFilter
             $query_all = array(
                 'aggs' => $this->getFiltersProductsCountsAggregationQuery($this->enabled_filters)
             );
-
             $result = AbstractFilter::$search_service->search(
                 'products',
                 $query_all,
@@ -1477,7 +1672,6 @@ class ElasticSearchFilter extends AbstractFilter
     public function getAggregation($name, $partial_name = false)
     {
         $aggregations = $this->getAggregations();
-
         if ($partial_name) {
             //caching the result
             $cache_key = 'aggregation_'.$name;
@@ -1499,5 +1693,63 @@ class ElasticSearchFilter extends AbstractFilter
         }
 
         return $aggregations[$name];
+    }
+
+    public static function getCategoriesSameLevel($id_parent, $id_lang, $active = true)
+    {
+        $sql_groups_where = '';
+        $sql_groups_join = '';
+        if (Group::isFeatureActive()) {
+            $sql_groups_join = 'LEFT JOIN `'._DB_PREFIX_.'category_group` cg ON (cg.`id_category` = c.`id_category`)';
+            $groups = FrontController::getCurrentCustomerGroups();
+            $sql_groups_where = 'AND cg.`id_group` '.(count($groups) ? 'IN ('.implode(',', $groups).')' : '='.(int)Group::getCurrent()->id);
+        }
+
+        $result = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
+            SELECT c.*, cl.id_lang, cl.name, cl.description, cl.link_rewrite, cl.meta_title, cl.meta_keywords, cl.meta_description
+            FROM `'._DB_PREFIX_.'category` c
+            '.Shop::addSqlAssociation('category', 'c').'
+            LEFT JOIN `'._DB_PREFIX_.'category_lang` cl ON (c.`id_category` = cl.`id_category` AND `id_lang` = '.(int)$id_lang.' '.Shop::addSqlRestrictionOnLang('cl').')
+            '.$sql_groups_join.'
+            WHERE `id_parent` = '.(int)$id_parent.'
+            '.($active ? 'AND `active` = 1' : '').'
+            '.$sql_groups_where.'
+            GROUP BY c.`id_category`
+            ORDER BY `level_depth` ASC, category_shop.`position` ASC');
+
+        return $result;
+    }
+
+    public function allowFilter($type, $typeId, $id)
+    {
+        if ($this->entity != 'menu_category') {
+            return true;
+        }
+
+        $cache_key = $type.'_'.$typeId.'_'.$this->id_entity;
+        if (!array_key_exists($cache_key, static::$allowedFilters)) {
+            static::$allowedFilters[$cache_key] = array();
+
+            $sql = 'SELECT `value`
+                    FROM `' . _DB_PREFIX_ . 'elasticsearch_menu_category_values`
+                    WHERE TRUE
+                    AND   `id_menu_category` = ' . $this->id_category . '
+                    AND   `id_shop` = ' . Context::getContext()->shop->id . '
+                    AND   `type` = "' . pSQL($type) . '"
+                    AND   `type_id` = ' . $typeId . '
+                    ;';
+
+            foreach (Db::getInstance()->executeS($sql) as $row) {
+                static::$allowedFilters[$cache_key][] = $row['value'];
+            }
+        }
+
+        // Si pas de config, on accpete tout, sinon on filtre
+        return !count(static::$allowedFilters[$cache_key]) || in_array($id, static::$allowedFilters[$cache_key]);
+    }
+
+    public function disallowFilter($type, $typeId, $id)
+    {
+        return !$this->allowFilter($type, $typeId, $id);
     }
 }

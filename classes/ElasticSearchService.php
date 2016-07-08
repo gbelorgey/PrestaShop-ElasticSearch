@@ -26,9 +26,9 @@ class ElasticSearchService extends SearchService
 
     private $host = null;
 
-    public function __construct($module_name = 'elasticsearch')
+    public function __construct($id_shop, $module_name = 'elasticsearch')
     {
-        $this->initIndex();
+        $this->initIndex($id_shop);
         $this->module_instance = Module::getInstanceByName($module_name);
         $this->host = Configuration::get('ELASTICSEARCH_HOST');
 
@@ -38,15 +38,15 @@ class ElasticSearchService extends SearchService
         $this->initClient();
     }
 
-    protected function initIndexPrefix()
+    protected function initIndexPrefix($id_shop, $force = false)
     {
-        if ($this->index_prefix)
+        if ($this->index_prefix && !$force)
             return;
 
-        if (!($prefix = Configuration::get('ELASTICSEARCH_INDEX_PREFIX')))
-        {
+        $prefix = Configuration::get('ELASTICSEARCH_INDEX_PREFIX', null, null, $id_shop);
+        if (!$prefix || $force) {
             $prefix = Tools::strtolower(Tools::passwdGen()).'_';
-            Configuration::updateValue('ELASTICSEARCH_INDEX_PREFIX', $prefix);
+            Configuration::updateValue('ELASTICSEARCH_INDEX_PREFIX', $prefix, false, null, $id_shop);
         }
 
         $this->index_prefix = $prefix;
@@ -65,15 +65,14 @@ class ElasticSearchService extends SearchService
 
     protected function initClient()
     {
-        if (!$this->host)
-        {
+        if (!$this->host) {
             $this->errors[] = $this->module_instance->l('Service host must be entered in order to use elastic search', self::FILENAME);
             return false;
         }
 
         $params = array();
         $params['hosts'] = array(
-            $this->host         				// Domain + Port
+            $this->host // Domain + Port
         );
 
         $this->client = new Elasticsearch\Client($params);
@@ -81,13 +80,16 @@ class ElasticSearchService extends SearchService
 
     public function testSearchServiceConnection()
     {
-        if (!$this->client || !$this->host)
+        if (!$this->client || !$this->host) {
             return false;
+        }
 
-        $response = Tools::jsonDecode(Tools::file_get_contents($this->host));
+        // Don't use the proxy.
+        $response = Tools::jsonDecode(file_get_contents($this->host, false));
 
-        if (!$response)
+        if (!$response) {
             return false;
+        }
 
         return isset($response->status) && $response->status = '200';
     }
@@ -98,14 +100,29 @@ class ElasticSearchService extends SearchService
      */
     private function generateFilterBodyByProduct($product)
     {
-        if (!is_object($product))
+        if (!is_object($product)) {
             $product = new Product($product, true);
+        }
 
         $attributes = Product::getAttributesInformationsByProduct($product->id);
         $features = $product->getFeatures();
+        if (class_exists('FeatureCombination', true)) {
+            $featurecombination = FeatureCombination::getFeatureValuesExistsOfProductCombination($product->id);
+            if (count($featurecombination) > 0) {
+                $features = array_merge($features, $featurecombination);
+            }
+        }
 
         $body = array();
         $body['categories'] = $product->getCategories();
+        $category_products = Db::getInstance()->executeS(
+            'SELECT cp.`id_category`, cp.`position` '.
+            'FROM `'._DB_PREFIX_.'category_product` cp '.
+            'WHERE `id_product` = '.(int)$product->id
+        );
+        foreach ($category_products as $cp) {
+            $body['position_'.$cp['id_category']] = (int)$cp['position'];
+        }
         $body['condition'] = $product->condition;
         $body['id_manufacturer'] = $product->id_manufacturer;
         $body['manufacturer_name'] = $product->manufacturer_name;
@@ -151,7 +168,7 @@ class ElasticSearchService extends SearchService
                     $body['lang_feature_value_'.$feature['id_feature_value'].'_'.$id_lang] = $feature_value_obj->value[$id_lang];
                 }
 
-                $body['feature_'.$feature['id_feature']] = $feature['id_feature_value'];
+                $body['feature_'.$feature['id_feature']][] = $feature['id_feature_value'];
             }
 
         return array_merge($body, $this->getProductPricesForIndexing($product->id));
@@ -169,31 +186,36 @@ class ElasticSearchService extends SearchService
         $body = array();
         $body['reference'] = $product->reference;
 
-        foreach ($product->name as $id_lang => $name)
-        {
-            $category_link_rewrite = Category::getLinkRewrite((int)$product->id_category_default, $id_lang);
+        if (is_array($product->name)) {
+            foreach ($product->name as $id_lang => $name)
+            {
+                $category_link_rewrite = Category::getLinkRewrite((int)$product->id_category_default, $id_lang);
 
-            $body['name_'.$id_lang] = $name;
-            $body['link_rewrite_'.$id_lang] = $product->link_rewrite[$id_lang];
-            $body['description_short_'.$id_lang] = $product->description_short[$id_lang];
-            $body['description_'.$id_lang] = $product->description[$id_lang];
-            $body['default_category_link_rewrite_'.$id_lang] = $category_link_rewrite;
-            $body['link_'.$id_lang] = Context::getContext()->link->getProductLink((int)$product->id, $product->link_rewrite[$id_lang], $category_link_rewrite, $product->ean13);
-            $body['search_keywords_'.$id_lang][] = $product->reference;
-            $body['search_keywords_'.$id_lang][] = $name;
-            $body['search_keywords_'.$id_lang][] = strip_tags($product->description[$id_lang]);
-            $body['search_keywords_'.$id_lang][] = strip_tags($product->description_short[$id_lang]);
-            $body['search_keywords_'.$id_lang][] = $product->manufacturer_name;
+                $body['name_'.$id_lang] = $name;
+                $body['link_rewrite_'.$id_lang] = $product->link_rewrite[$id_lang];
+                $body['description_short_'.$id_lang] = $product->description_short[$id_lang];
+                $body['description_'.$id_lang] = $product->description[$id_lang];
+                $body['default_category_link_rewrite_'.$id_lang] = $category_link_rewrite;
+                $body['link_'.$id_lang] = Context::getContext()->link->getProductLink((int)$product->id, $product->link_rewrite[$id_lang], $category_link_rewrite, $product->ean13);
+                $body['search_keywords_'.$id_lang][] = $product->reference;
+                $body['search_keywords_'.$id_lang][] = $name;
+                $body['search_keywords_'.$id_lang][] = strip_tags($product->description[$id_lang]);
+                $body['search_keywords_'.$id_lang][] = strip_tags($product->description_short[$id_lang]);
+                $body['search_keywords_'.$id_lang][] = $product->manufacturer_name;
+            }
+        }
+        $category = new Category($product->id_category_default);
+        if (Validate::isLoadedObject($category) && is_array($category->name)) {
+            foreach ($category->name as $id_lang => $category_name) {
+                $body['search_keywords_'.$id_lang][] = $category_name;
+            }
         }
 
-        $category = new Category($product->id_category_default);
-
-        foreach ($category->name as $id_lang => $category_name)
-            $body['search_keywords_'.$id_lang][] = $category_name;
-
-        foreach (Language::getLanguages() as $lang)
-            $body['search_keywords_'.$lang['id_lang']] = Tools::strtolower(implode(' ', array_filter($body['search_keywords_'.$lang['id_lang']])));
-
+        foreach (Language::getLanguages() as $lang) {
+            if (isset($body['search_keywords_'.$lang['id_lang']])) {
+                $body['search_keywords_'.$lang['id_lang']] = Tools::strtolower(implode(' ', array_filter($body['search_keywords_'.$lang['id_lang']])));
+            }
+        }
         $body['quantity'] = $product->quantity;
         $body['price'] = $product->price;
 
@@ -209,14 +231,19 @@ class ElasticSearchService extends SearchService
         return array_merge($this->generateSearchKeywordsBodyByProduct($product), $this->generateFilterBodyByProduct($product));
     }
 
-    public function generateSearchBodyByCategory($id_category)
+    public function generateSearchBodyByCategory($category)
     {
-        $category = new Category($id_category);
+        if (!is_object($category)) {
+            $category = new Category($id_category);
+        }
 
         $body = array();
 
-        foreach ($category->name as $id_lang => $name)
-            $body['name_'.$id_lang] = $name;
+        if (is_array($category->name)) {
+            foreach ($category->name as $id_lang => $name) {
+                $body['name_'.$id_lang] = $name;
+            }
+        }
 
         $body['id_parent'] = $category->id_parent;
         $body['level_depth'] = $category->level_depth;
@@ -249,26 +276,23 @@ class ElasticSearchService extends SearchService
 
     public static function getProductPricesForIndexing($id_product)
     {
-        static $groups = null;
-
-        if (is_null($groups))
-        {
-            $groups = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('SELECT id_group FROM `'._DB_PREFIX_.'group_reduction`');
-            if (!$groups)
-                $groups = array();
-        }
-
         $id_shop = (int)Context::getContext()->shop->id;
-
-        static $currency_list = null;
-
-        if (is_null($currency_list))
-            $currency_list = Currency::getCurrencies(false, 1, new Shop($id_shop));
-
         $min_price = array();
         $max_price = array();
+        $reduction_display = array();
+        $specific_prices_index = array();
 
-        if (Configuration::get('ELASTICSEARCH_PRICE_USETAX'))
+        static $currency_list = null;
+        if (is_null($currency_list)) {
+            $currency_list = Currency::getCurrencies(false, 1, new Shop($id_shop));
+        }
+        foreach ($currency_list as $currency) {
+            $max_price[$currency['id_currency']] = null;
+            $min_price[$currency['id_currency']] = null;
+            $reduction_display[$currency['id_currency']] = array();
+        }
+
+        if (Configuration::get('ELASTICSEARCH_PRICE_USETAX')) {
             $max_tax_rate = Db::getInstance()->getValue('
                 SELECT max(t.rate) max_rate
                 FROM `'._DB_PREFIX_.'product_shop` p
@@ -277,79 +301,98 @@ class ElasticSearchService extends SearchService
                 LEFT JOIN `'._DB_PREFIX_.'tax` t ON (t.id_tax = tr.id_tax AND t.active = 1)
                 WHERE id_product = '.(int)$id_product.'
                 GROUP BY id_product');
-        else
+        } else {
             $max_tax_rate = 0;
-
-        $product_min_prices = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS('
-            SELECT id_shop, id_currency, id_country, id_group, from_quantity
-            FROM `'._DB_PREFIX_.'specific_price`
-            WHERE id_product = '.(int)$id_product
-        );
-
-        // Get min price
-        foreach ($currency_list as $currency)
-        {
-            $price = Product::priceCalculation($id_shop, (int)$id_product, null, null, null, null,
-                $currency['id_currency'], null, null, false, 6, false, true, true,
-                $specific_price_output, true);
-
-            if (!isset($max_price[$currency['id_currency']]))
-                $max_price[$currency['id_currency']] = 0;
-            if (!isset($min_price[$currency['id_currency']]))
-                $min_price[$currency['id_currency']] = null;
-            if ($price > $max_price[$currency['id_currency']])
-                $max_price[$currency['id_currency']] = $price;
-            if ($price == 0)
-                continue;
-            if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
-                $min_price[$currency['id_currency']] = $price;
         }
 
-        foreach ($product_min_prices as $specific_price)
-            foreach ($currency_list as $currency)
-            {
-                if ($specific_price['id_currency'] && $specific_price['id_currency'] != $currency['id_currency'])
-                    continue;
-                $price = Product::priceCalculation((($specific_price['id_shop'] == 0) ? null : (int)$specific_price['id_shop']), (int)$id_product,
-                    null, (($specific_price['id_country'] == 0) ? null : $specific_price['id_country']), null, null,
-                    $currency['id_currency'], (($specific_price['id_group'] == 0) ? null : $specific_price['id_group']),
-                    $specific_price['from_quantity'], false, 6, false, true, true, $specific_price_output, true);
+        // Get price for all combinations + default (base)
+        $combinations_query = new DbQuery();
+        $combinations_query->select('pas.`id_product_attribute`');
+        $combinations_query->from('product_attribute_shop', 'pas');
+        $combinations_query->where('pas.`id_product` = '.(int)$id_product);
+        $combinations_query->where('pas.`id_shop` = '.(int)$id_shop);
+        $combinations = Db::getInstance(_PS_USE_SQL_SLAVE_)->executeS($combinations_query);
+        if (!$combinations) {
+            $combinations = array();
+        } else {
+            $combinations = array_map(
+                function ($c) {
+                    return (int)$c['id_product_attribute'];
+                },
+                $combinations
+            );
+        }
+        array_unshift($combinations, null); // Add default
 
-                if (!isset($max_price[$currency['id_currency']]))
-                    $max_price[$currency['id_currency']] = 0;
-                if (!isset($min_price[$currency['id_currency']]))
-                    $min_price[$currency['id_currency']] = null;
-                if ($price > $max_price[$currency['id_currency']])
+        foreach ($combinations as $combination) {
+            foreach ($currency_list as $currency) {
+                $price = Product::priceCalculation(
+                    $id_shop,
+                    (int)$id_product,
+                    $combination,
+                    null,
+                    null,
+                    null,
+                    $currency['id_currency'],
+                    null,
+                    null,
+                    false,
+                    6,
+                    false,
+                    true,
+                    true,
+                    $specific_price_output,
+                    true
+                );
+                if ($price == 0) {
+                    continue;
+                }
+                if ($specific_price_output !== false) {
+                    $specific_prices_index[] = (int)$specific_price_output['id_specific_price'];
+                }
+                if ($price > $max_price[$currency['id_currency']]) {
                     $max_price[$currency['id_currency']] = $price;
-                if ($price == 0)
-                    continue;
-                if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
+                }
+                if ($price < $min_price[$currency['id_currency']]) {
                     $min_price[$currency['id_currency']] = $price;
-            }
+                }
 
-        foreach ($groups as $group)
-            foreach ($currency_list as $currency)
-            {
-                $price = Product::priceCalculation(null, (int)$id_product, null, null, null, null, (int)$currency['id_currency'], (int)$group['id_group'],
-                    null, false, 6, false, true, true, $specific_price_output, true);
+                $price_without_reduction = Product::priceCalculation(
+                    $id_shop,
+                    (int)$id_product,
+                    $combination,
+                    null,
+                    null,
+                    null,
+                    $currency['id_currency'],
+                    null,
+                    null,
+                    false,
+                    6,
+                    false,
+                    false,
+                    true,
+                    $specific_price_output,
+                    true
+                );
 
-                if (!isset($max_price[$currency['id_currency']]))
-                    $max_price[$currency['id_currency']] = 0;
-                if (!isset($min_price[$currency['id_currency']]))
-                    $min_price[$currency['id_currency']] = null;
-                if ($price > $max_price[$currency['id_currency']])
-                    $max_price[$currency['id_currency']] = $price;
-                if ($price == 0)
-                    continue;
-                if (is_null($min_price[$currency['id_currency']]) || $price < $min_price[$currency['id_currency']])
-                    $min_price[$currency['id_currency']] = $price;
+                if ($price_without_reduction > $price) {
+                    $reduction_display[$currency['id_currency']][] = round((1 - $price/$price_without_reduction) * 100);
+                }
             }
+        }
 
         $values = array();
-        foreach ($currency_list as $currency)
-        {
-            $values['price_min_'.(int)$currency['id_currency']] = (int)$min_price[$currency['id_currency']];
-            $values['price_max_'.(int)$currency['id_currency']] = (int)Tools::ps_round($max_price[$currency['id_currency']] * (100 + $max_tax_rate) / 100, 0);
+        foreach ($currency_list as $currency) {
+            $values['price_min_'.(int)$currency['id_currency']] = (int)floor($min_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
+            $values['price_max_'.(int)$currency['id_currency']] = (int)ceil($max_price[$currency['id_currency']] * (100 + $max_tax_rate)) / 100;
+            $values['discount_'.(int)$currency['id_currency']] = array_unique($reduction_display[$currency['id_currency']]);
+        }
+
+        // Save specific prices index state
+        if (class_exists('SpecificPriceElasticIndex')) {
+            $specific_prices_index = array_unique($specific_prices_index);
+            SpecificPriceElasticIndex::setProductIndex($id_product, $id_shop, $specific_prices_index);
         }
 
         return $values;
@@ -357,10 +400,11 @@ class ElasticSearchService extends SearchService
 
     public function indexAllProducts($delete_old = true)
     {
-        try
-        {
-            if ($delete_old)
+        try {
+            if ($delete_old) {
                 $this->deleteShopIndex();
+                $this->initIndex(null, true);
+            }
 
             if (!$this->createIndexForCurrentShop())
                 return false;
@@ -404,19 +448,25 @@ class ElasticSearchService extends SearchService
         if (!$shop_categories)
             return true;
 
-        foreach ($shop_categories as $category)
-        {
-            if ($this->documentExists($id_shop, (int)$category['id_category'], 'categories'))
+        foreach ($shop_categories as $category) {
+            if ($this->documentExists($id_shop, (int)$category['id_category'], 'categories')) {
                 continue;
+            }
+
+            $category_object = new Category((int)$category['id_category']);
+            if (!Validate::isLoadedObject($category_object)) {
+                continue;
+            }
 
             $result = $this->createDocument(
-                $this->generateSearchBodyByCategory((int)$category['id_category']),
+                $this->generateSearchBodyByCategory($category_object),
                 $category['id_category'],
                 'categories'
             );
 
-            if (!isset($result['created']) || $result['created'] !== true)
+            if (!isset($result['created']) || $result['created'] !== true) {
                 $this->errors[] = sprintf($this->module_instance->l('Unable to index category #%d'), $category['id_category']);
+            }
         }
 
         return $this->errors ? false : true;
@@ -522,25 +572,31 @@ class ElasticSearchService extends SearchService
         if ($filter !== null)
             $params['body']['filter'] = $filter;
 
-        if ($pagination !== null)
+        if ($pagination !== null) {
             $params['size'] = $pagination;               // how many results *per shard* you want back
+        }
 
         if ($from !== null)
             $params['from'] = $from;
 
-        try
-        {
-            if ($pagination === null && $from === null)
-            {
+        try {
+            if ($pagination === null && $from === null) {
                 $params['search_type'] = 'count';
                 return (int)$this->client->search($params)['hits']['total'];
             }
 
-            if ($order_by && $order_way)
-                $params['sort'] = array($order_by.':'.$order_way);
 
-            if ($aggregation)
-            {
+            if (Configuration::get('ELASTICSEARCH_SHOW_INSTOCK_FIRST') && !$aggregation) {
+                $params['sort'] = array('in_stock_when_global_oos_deny_orders:desc');
+            }
+            if ($order_by && $order_way) {
+                if (!isset($params['sort'])) {
+                    $params['sort'] = array();
+                }
+                $params['sort'][] = $order_by.':'.$order_way;
+            }
+
+            if ($aggregation) {
                 $params['search_type'] = 'count';
                 return $this->client->search($params);
             }
@@ -568,6 +624,9 @@ class ElasticSearchService extends SearchService
             $aggregation_query[$field['alias']]['aggs'][$field['alias']][$field['aggregation_type']] = array(
                 'field' => $field['field']
             );
+            if ($field['aggregation_type'] == 'terms') {
+                $aggregation_query[$field['alias']]['aggs'][$field['alias']][$field['aggregation_type']]['size'] = 0;
+            }
         }
 
         return $aggregation_query;

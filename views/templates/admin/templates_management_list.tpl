@@ -241,6 +241,43 @@
 					</div>
 				</div>
 			</li>
+			<li class="filter_list_item" draggable="true">
+				<div class="col-lg-2">
+					<label class="switch-light prestashop-switch fixed-width-lg">
+						<input name="elasticsearch_selection_discount" id="elasticsearch_selection_discount" type="checkbox" />
+						<span>
+							<span>{l s='Yes' mod='elasticsearch'}</span>
+							<span>{l s='No' mod='elasticsearch'}</span>
+						</span>
+						<a class="slide-button btn"></a>
+					</label>
+				</div>
+				<div class="col-lg-4">
+					<span class="module_name">{l s='Discount filter' mod='elasticsearch'}</span>
+				</div>
+				<div class="col-lg-3 pull-right">
+					<label class="control-label col-lg-6">{l s='Filter result limit:' mod='elasticsearch'}</label>
+					<div class="col-lg-6">
+						<select name="elasticsearch_selection_discount_filter_show_limit">
+							<option value="0">{l s='No limit' mod='elasticsearch'}</option>
+							<option value="4">4</option>
+							<option value="5">5</option>
+							<option value="10">10</option>
+							<option value="20">20</option>
+						</select>
+					</div>
+				</div>
+				<div class="col-lg-3 pull-right">
+					<label class="control-label col-lg-6">{l s='Filter style:' mod='elasticsearch'}</label>
+					<div class="col-lg-6">
+						<select name="elasticsearch_selection_discount_filter_type">
+							<option value="0">{l s='Checkbox' mod='elasticsearch'}</option>
+							<option value="1">{l s='Radio button' mod='elasticsearch'}</option>
+							<option value="2">{l s='Drop-down list' mod='elasticsearch'}</option>
+						</select>
+					</div>
+				</div>
+			</li>
 			{if $attribute_groups|count > 0}
 				{foreach $attribute_groups as $attribute_group}
 				<li class="filter_list_item" draggable="true">

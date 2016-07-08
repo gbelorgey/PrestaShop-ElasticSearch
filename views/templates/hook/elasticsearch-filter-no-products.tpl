@@ -11,8 +11,8 @@
 *  @license   --
 *  International Registered Trademark & Property of INVERTUS, UAB
 *}
-<div class="product_list clear">
-	<p class="alert alert-warning">
+<div class="product-list clear">
+	<p class="alert alert--warning">
 		{l s='There are no products.' mod='elasticsearch'}
 	</p>
 </div>
